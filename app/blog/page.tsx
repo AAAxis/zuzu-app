@@ -29,7 +29,6 @@ export default function BlogPage() {
         .from("blog_posts")
         .select("id, title, slug, excerpt, featured_image, category, published_at, read_time")
         .eq("status", "published")
-        .eq("brand", "zuzu")
         .order("published_at", { ascending: false })
 
       if (!error && data) setPosts(data)
