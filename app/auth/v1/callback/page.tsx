@@ -2,21 +2,25 @@
 
 import { useEffect, useState } from "react"
 import { getSupabase } from "@/lib/supabase"
-import { Dumbbell, CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { Dumbbell, CheckCircle, XCircle, Loader2, Lock } from "lucide-react"
 import Link from "next/link"
 
 export default function AuthCallback() {
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "reset-password">("loading")
   const [message, setMessage] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     async function handleCallback() {
       try {
+        // Supabase redirects with tokens in the hash fragment
         const hash = window.location.hash.substring(1)
-        const params = new URLSearchParams(hash)
-        const accessToken = params.get("access_token")
-        const refreshToken = params.get("refresh_token")
-        const type = params.get("type")
+        const hashParams = new URLSearchParams(hash)
+        const accessToken = hashParams.get("access_token")
+        const refreshToken = hashParams.get("refresh_token")
+        const type = hashParams.get("type")
 
         if (accessToken && refreshToken) {
           const { error } = await getSupabase().auth.setSession({
@@ -30,28 +34,53 @@ export default function AuthCallback() {
             return
           }
 
-          if (type === "signup") {
+          if (type === "recovery") {
+            setStatus("reset-password")
+            return
+          }
+
+          if (type === "signup" || type === "email") {
             setStatus("success")
             setMessage("Your email has been confirmed! You can now use the app.")
-          } else if (type === "recovery") {
-            setStatus("success")
-            setMessage("Password recovery successful. You can now set a new password in the app.")
-          } else {
-            setStatus("success")
-            setMessage("Authentication successful! You can now use the app.")
+            return
           }
-        } else {
-          // Check for query params (some flows use ? instead of #)
-          const query = new URLSearchParams(window.location.search)
-          const errorDesc = query.get("error_description")
-          if (errorDesc) {
-            setStatus("error")
-            setMessage(errorDesc)
-          } else {
-            setStatus("error")
-            setMessage("Invalid authentication link. Please try again.")
-          }
+
+          setStatus("success")
+          setMessage("Authentication successful!")
+          return
         }
+
+        // If no hash tokens, try to exchange via URL (Supabase might handle it)
+        // Wait for Supabase to process the redirect
+        const { data, error } = await getSupabase().auth.getSession()
+        
+        if (data?.session) {
+          const url = new URL(window.location.href)
+          const urlType = url.searchParams.get("type")
+          
+          if (urlType === "recovery") {
+            setStatus("reset-password")
+            return
+          }
+
+          setStatus("success")
+          setMessage("Your email has been confirmed! You can now use the app.")
+          return
+        }
+
+        // No session yet — the verify endpoint redirects here with tokens in hash
+        // Give Supabase a moment to process
+        await new Promise(r => setTimeout(r, 2000))
+        
+        const { data: retryData } = await getSupabase().auth.getSession()
+        if (retryData?.session) {
+          setStatus("success")
+          setMessage("Authentication successful!")
+          return
+        }
+
+        setStatus("error")
+        setMessage("This link has expired or is invalid. Please request a new one.")
       } catch (err) {
         setStatus("error")
         setMessage("Something went wrong. Please try again.")
@@ -60,6 +89,31 @@ export default function AuthCallback() {
 
     handleCallback()
   }, [])
+
+  async function handlePasswordReset() {
+    if (newPassword.length < 6) {
+      setMessage("Password must be at least 6 characters")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage("Passwords don't match")
+      return
+    }
+
+    setUpdating(true)
+    setMessage("")
+
+    const { error } = await getSupabase().auth.updateUser({ password: newPassword })
+
+    if (error) {
+      setMessage(error.message)
+      setUpdating(false)
+      return
+    }
+
+    setStatus("success")
+    setMessage("Password updated successfully! You can now log in with your new password.")
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[var(--light)] to-white flex items-center justify-center px-6">
@@ -78,7 +132,47 @@ export default function AuthCallback() {
             <>
               <Loader2 className="w-16 h-16 text-[var(--primary)] mx-auto mb-6 animate-spin" />
               <h1 className="text-2xl font-bold mb-3">Verifying...</h1>
-              <p className="text-[var(--muted)]">Please wait while we confirm your account.</p>
+              <p className="text-[var(--muted)]">Please wait while we process your request.</p>
+            </>
+          )}
+
+          {status === "reset-password" && (
+            <>
+              <Lock className="w-16 h-16 text-[var(--primary)] mx-auto mb-6" />
+              <h1 className="text-2xl font-bold mb-3">Set New Password</h1>
+              <p className="text-[var(--muted)] mb-6">Enter your new password below.</p>
+              
+              {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
+              
+              <div className="space-y-4 text-left">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat password"
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
+                  />
+                </div>
+                <button
+                  onClick={handlePasswordReset}
+                  disabled={updating}
+                  className="w-full bg-[var(--primary)] text-white py-3.5 rounded-full font-semibold hover:opacity-90 transition-all disabled:opacity-50"
+                >
+                  {updating ? "Updating..." : "Update Password"}
+                </button>
+              </div>
             </>
           )}
 
