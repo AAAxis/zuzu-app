@@ -473,7 +473,13 @@ function UploadModal({
       const ext = file.name.split(".").pop()
       const filePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
 
-      // Upload file to Supabase Storage
+      // Ensure bucket exists, then upload
+      await supabase.storage.createBucket(BUCKET, {
+        public: true,
+        allowedMimeTypes: ["image/*", "video/*"],
+        fileSizeLimit: 104857600,
+      })
+
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
         .upload(filePath, file, { cacheControl: "3600", upsert: false })
