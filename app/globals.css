@@ -46,3 +46,11 @@ html { scroll-behavior: smooth; }
   border-radius: 2px;
   margin: 0 auto;
 }
+
+/* Dashboard spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
