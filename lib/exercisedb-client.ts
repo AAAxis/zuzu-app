@@ -99,6 +99,7 @@ export interface ExerciseDBItem {
   target?: string
   targetMuscles?: string[]
   secondaryMuscles?: string[]
+  secondary?: string[]
   gifUrl?: string
   gif?: string
   imageUrl?: string

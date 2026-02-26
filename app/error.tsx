@@ -5,7 +5,9 @@ import { AlertCircle } from "lucide-react"
 import Link from "next/link"
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message
+  if (error instanceof Error) {
+    return (error as Error).message
+  }
   if (typeof error === "string") return error
   // Avoid displaying [object Event] or [object Object]
   if (error && typeof error === "object" && "message" in error && typeof (error as { message: unknown }).message === "string") {
