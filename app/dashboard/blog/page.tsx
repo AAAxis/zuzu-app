@@ -5,12 +5,9 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Eye,
   Search,
   Loader2,
-  Globe,
   Sparkles,
-  ChevronDown,
   ExternalLink,
   X,
 } from "lucide-react"
@@ -319,11 +316,18 @@ function BlogEditorModal({
 }) {
   const isEdit = !!post
 
-  // Form state
-  const [lang, setLang] = useState<"en" | "he">(post?.original_language || "en")
-  const [title, setTitle] = useState("")
-  const [excerpt, setExcerpt] = useState("")
-  const [content, setContent] = useState("")
+  // Language content (both optional; at least one required on save)
+  const [heTitle, setHeTitle] = useState("")
+  const [heExcerpt, setHeExcerpt] = useState("")
+  const [heContent, setHeContent] = useState("")
+  const [enTitle, setEnTitle] = useState("")
+  const [enExcerpt, setEnExcerpt] = useState("")
+  const [enContent, setEnContent] = useState("")
+
+  // Primary language = which one is used for slug/main fields (title, excerpt, content in DB)
+  const [primaryLanguage, setPrimaryLanguage] = useState<"he" | "en">(post?.original_language || "he")
+
+  // Shared meta
   const [featuredImage, setFeaturedImage] = useState("")
   const [featuredImageSource, setFeaturedImageSource] = useState("")
   const [category, setCategory] = useState("Fitness")
@@ -332,26 +336,15 @@ function BlogEditorModal({
   const [tagsStr, setTagsStr] = useState("")
   const [status, setStatus] = useState<"draft" | "published">("draft")
 
-  // Translation state
-  const [heTitle, setHeTitle] = useState("")
-  const [heExcerpt, setHeExcerpt] = useState("")
-  const [heContent, setHeContent] = useState("")
-  const [enTitle, setEnTitle] = useState("")
-  const [enExcerpt, setEnExcerpt] = useState("")
-  const [enContent, setEnContent] = useState("")
-
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [generatePrompt, setGeneratePrompt] = useState("")
   const [error, setError] = useState("")
-  const [activeTab, setActiveTab] = useState<"content" | "translations">("content")
+  const [activeTab, setActiveTab] = useState<"he" | "en">("he")
 
   // Initialize from existing post
   useEffect(() => {
     if (post) {
-      setTitle(post.title || "")
-      setExcerpt(post.excerpt || "")
-      setContent(post.content || "")
       setFeaturedImage(post.featured_image || "")
       setFeaturedImageSource(post.featured_image_source || "")
       setCategory(post.category || "Fitness")
@@ -359,27 +352,40 @@ function BlogEditorModal({
       setReadTime(post.read_time || 5)
       setTagsStr((post.tags || []).join(", "))
       setStatus(post.status || "draft")
-      setLang(post.original_language || "en")
-      setHeTitle(post.translations?.he?.title || "")
-      setHeExcerpt(post.translations?.he?.excerpt || "")
-      setHeContent(post.translations?.he?.content || "")
-      setEnTitle(post.translations?.en?.title || "")
-      setEnExcerpt(post.translations?.en?.excerpt || "")
-      setEnContent(post.translations?.en?.content || "")
+      setPrimaryLanguage(post.original_language || "he")
+      // Main fields + translations: main is in title/excerpt/content, other in translations
+      if (post.original_language === "he") {
+        setHeTitle(post.title || "")
+        setHeExcerpt(post.excerpt || "")
+        setHeContent(post.content || "")
+        setEnTitle(post.translations?.en?.title || "")
+        setEnExcerpt(post.translations?.en?.excerpt || "")
+        setEnContent(post.translations?.en?.content || "")
+      } else {
+        setEnTitle(post.title || "")
+        setEnExcerpt(post.excerpt || "")
+        setEnContent(post.content || "")
+        setHeTitle(post.translations?.he?.title || "")
+        setHeExcerpt(post.translations?.he?.excerpt || "")
+        setHeContent(post.translations?.he?.content || "")
+      }
     }
   }, [post])
 
-  // Auto-detect language from title and content
-  useEffect(() => {
-    const combined = `${title}\n${content}`.trim()
-    if (combined) setLang(detectLanguage(combined))
-  }, [title, content])
-
   async function handleSave() {
-    if (!title.trim()) {
-      setError("Title is required")
+    // At least one language must have a title; primary is used for slug/main fields
+    const hasHe = !!(heTitle?.trim())
+    const hasEn = !!(enTitle?.trim())
+    if (!hasHe && !hasEn) {
+      setError("Fill at least one language (Hebrew or English) with a title.")
       return
     }
+    // Resolve primary: if only one language filled, use it; else use primaryLanguage
+    const primary = hasHe && hasEn ? primaryLanguage : hasHe ? "he" : "en"
+    const title = primary === "he" ? heTitle.trim() : enTitle.trim()
+    const excerpt = primary === "he" ? heExcerpt.trim() : enExcerpt.trim()
+    const content = primary === "he" ? heContent.trim() : enContent.trim()
+
     setSaving(true)
     setError("")
 
@@ -389,19 +395,11 @@ function BlogEditorModal({
       .filter(Boolean)
 
     const translations: BlogPost["translations"] = {}
-    if (heTitle || heExcerpt || heContent) {
-      translations.he = {
-        title: heTitle,
-        excerpt: heExcerpt,
-        content: heContent,
-      }
+    if (hasHe && primary !== "he") {
+      translations.he = { title: heTitle.trim(), excerpt: heExcerpt.trim(), content: heContent.trim() }
     }
-    if (enTitle || enExcerpt || enContent) {
-      translations.en = {
-        title: enTitle,
-        excerpt: enExcerpt,
-        content: enContent,
-      }
+    if (hasEn && primary !== "en") {
+      translations.en = { title: enTitle.trim(), excerpt: enExcerpt.trim(), content: enContent.trim() }
     }
 
     const payload = {
@@ -417,7 +415,7 @@ function BlogEditorModal({
       tags,
       status,
       translations,
-      original_language: lang,
+      original_language: primary,
     }
 
     const res = await fetch("/api/blog", {
@@ -441,10 +439,13 @@ function BlogEditorModal({
     setGenerating(true)
     setError("")
 
+    // Generate in the language of the active tab (or primary)
+    const genLang = activeTab
+
     const res = await fetch("/api/blog/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: generatePrompt.trim(), language: lang }),
+      body: JSON.stringify({ topic: generatePrompt.trim(), language: genLang }),
     })
 
     const data = await res.json().catch(() => ({}))
@@ -454,21 +455,25 @@ function BlogEditorModal({
       return
     }
 
-    setTitle(data.title || "")
-    setExcerpt(data.excerpt || "")
-    setContent(data.content || "")
+    if (genLang === "he") {
+      setHeTitle(data.title || "")
+      setHeExcerpt(data.excerpt || "")
+      setHeContent(data.content || "")
+    } else {
+      setEnTitle(data.title || "")
+      setEnExcerpt(data.excerpt || "")
+      setEnContent(data.content || "")
+    }
+
     setCategory(data.category || "Fitness")
     setTagsStr((data.tags || []).join(", "))
     setReadTime(data.read_time || 5)
-    if (data.featured_image) {
-      setFeaturedImage(data.featured_image)
-    }
-    if (data.featured_image_source) {
-      setFeaturedImageSource(data.featured_image_source)
-    }
+    if (data.featured_image) setFeaturedImage(data.featured_image)
+    if (data.featured_image_source) setFeaturedImageSource(data.featured_image_source)
+    setPrimaryLanguage(genLang)
 
-    // Auto-translate to the other language
-    const targetLang = lang === "en" ? "he" : "en"
+    // Auto-translate to the other language (optional fill)
+    const targetLang = genLang === "en" ? "he" : "en"
     const translateRes = await fetch("/api/blog/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -476,7 +481,7 @@ function BlogEditorModal({
         title: data.title || "",
         excerpt: data.excerpt || "",
         content: data.content || "",
-        from: lang,
+        from: genLang,
         to: targetLang,
       }),
     })
@@ -539,32 +544,49 @@ function BlogEditorModal({
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs: Hebrew | English */}
         <div className="flex border-b border-[#E8E5F0]">
           <button
-            onClick={() => setActiveTab("content")}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === "content"
-                ? "text-[#7C3AED] border-b-2 border-[#7C3AED]"
-                : "text-[#6B7280] hover:text-[#1a1a2e]"
-            }`}
-          >
-            Content
-          </button>
-          <button
-            onClick={() => setActiveTab("translations")}
+            onClick={() => setActiveTab("he")}
             className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-              activeTab === "translations"
+              activeTab === "he"
                 ? "text-[#7C3AED] border-b-2 border-[#7C3AED]"
                 : "text-[#6B7280] hover:text-[#1a1a2e]"
             }`}
           >
-            <Globe className="w-3.5 h-3.5" />
-            Translations
-            {(heTitle || enTitle) && (
+            🇮🇱 Hebrew
+            {heTitle && (
               <span className="w-2 h-2 rounded-full bg-green-400" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("en")}
+            className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              activeTab === "en"
+                ? "text-[#7C3AED] border-b-2 border-[#7C3AED]"
+                : "text-[#6B7280] hover:text-[#1a1a2e]"
+            }`}
+          >
+            🇺🇸 English
+            {enTitle && (
+              <span className="w-2 h-2 rounded-full bg-green-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Primary language (used for slug / main post fields when both are filled) */}
+        <div className="px-6 py-3 border-b border-[#E8E5F0] bg-[#FAFAFA]">
+          <label className="text-sm font-medium text-[#6B7280]">
+            Primary language (for URL/slug when both are filled):{" "}
+            <select
+              value={primaryLanguage}
+              onChange={(e) => setPrimaryLanguage(e.target.value as "he" | "en")}
+              className="ml-2 px-3 py-1.5 rounded-lg border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
+            >
+              <option value="he">Hebrew</option>
+              <option value="en">English</option>
+            </select>
+          </label>
         </div>
 
         {/* Error */}
@@ -574,177 +596,12 @@ function BlogEditorModal({
           </div>
         )}
 
-        {/* Content Tab */}
-        {activeTab === "content" && (
-          <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-            {/* Title */}
+        {/* Hebrew Tab */}
+        {activeTab === "he" && (
+          <div className="p-6 space-y-4 max-h-[50vh] overflow-y-auto">
+            <p className="text-xs text-[#6B7280]">Optional. Fill at least Hebrew or English.</p>
             <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter post title..."
-                dir={lang === "he" ? "rtl" : "ltr"}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-              />
-            </div>
-
-            {/* Excerpt */}
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Excerpt
-              </label>
-              <textarea
-                value={excerpt}
-                onChange={(e) => setExcerpt(e.target.value)}
-                placeholder="Short summary for preview cards..."
-                dir={lang === "he" ? "rtl" : "ltr"}
-                rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none"
-              />
-            </div>
-
-            {/* Content (HTML) */}
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Content (HTML)
-              </label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your post content in HTML..."
-                dir={lang === "he" ? "rtl" : "ltr"}
-                rows={12}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-y"
-              />
-            </div>
-
-            {/* Featured Image */}
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Featured Image URL
-              </label>
-              <input
-                type="text"
-                value={featuredImage}
-                onChange={(e) => setFeaturedImage(e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-              />
-              {featuredImageSource && (
-                <p className="mt-1.5 text-xs text-[#6B7280]">
-                  Source:{" "}
-                  <a
-                    href={featuredImageSource}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#7C3AED] hover:underline"
-                  >
-                    Open source link
-                  </a>
-                </p>
-              )}
-              {featuredImage && (
-                <div className="mt-2 w-full max-w-sm aspect-video rounded-xl overflow-hidden border border-[#E8E5F0]">
-                  <img
-                    src={featuredImage}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Row: Category + Author + Read Time */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                  Author
-                </label>
-                <input
-                  type="text"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                  Read Time (min)
-                </label>
-                <input
-                  type="number"
-                  value={readTime}
-                  onChange={(e) => setReadTime(Number(e.target.value))}
-                  min={1}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-                />
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Tags (comma separated)
-              </label>
-              <input
-                type="text"
-                value={tagsStr}
-                onChange={(e) => setTagsStr(e.target.value)}
-                placeholder="fitness, health, workout"
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-              />
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as "draft" | "published")}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Translations Tab */}
-        {activeTab === "translations" && (
-          <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-            {/* Hebrew Translation */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-[#1a1a2e] flex items-center gap-2">
-                🇮🇱 Hebrew Translation
-                {heTitle && (
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    Available
-                  </span>
-                )}
-              </h3>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Title</label>
               <input
                 type="text"
                 value={heTitle}
@@ -753,6 +610,9 @@ function BlogEditorModal({
                 dir="rtl"
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Excerpt</label>
               <textarea
                 value={heExcerpt}
                 onChange={(e) => setHeExcerpt(e.target.value)}
@@ -761,50 +621,136 @@ function BlogEditorModal({
                 rows={2}
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Content (HTML)</label>
               <textarea
                 value={heContent}
                 onChange={(e) => setHeContent(e.target.value)}
                 placeholder="תוכן (HTML)..."
                 dir="rtl"
-                rows={8}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-y"
-              />
-            </div>
-
-            {/* English Translation */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-[#1a1a2e] flex items-center gap-2">
-                🇺🇸 English Translation
-                {enTitle && (
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    Available
-                  </span>
-                )}
-              </h3>
-              <input
-                type="text"
-                value={enTitle}
-                onChange={(e) => setEnTitle(e.target.value)}
-                placeholder="Title..."
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-              />
-              <textarea
-                value={enExcerpt}
-                onChange={(e) => setEnExcerpt(e.target.value)}
-                placeholder="Excerpt..."
-                rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none"
-              />
-              <textarea
-                value={enContent}
-                onChange={(e) => setEnContent(e.target.value)}
-                placeholder="Content (HTML)..."
-                rows={8}
+                rows={10}
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-y"
               />
             </div>
           </div>
         )}
+
+        {/* English Tab */}
+        {activeTab === "en" && (
+          <div className="p-6 space-y-4 max-h-[50vh] overflow-y-auto">
+            <p className="text-xs text-[#6B7280]">Optional. Fill at least Hebrew or English.</p>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Title</label>
+              <input
+                type="text"
+                value={enTitle}
+                onChange={(e) => setEnTitle(e.target.value)}
+                placeholder="Post title..."
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Excerpt</label>
+              <textarea
+                value={enExcerpt}
+                onChange={(e) => setEnExcerpt(e.target.value)}
+                placeholder="Short summary for preview cards..."
+                rows={2}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Content (HTML)</label>
+              <textarea
+                value={enContent}
+                onChange={(e) => setEnContent(e.target.value)}
+                placeholder="Write your post content in HTML..."
+                rows={10}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-y"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Shared meta (featured image, category, author, etc.) */}
+        <div className="p-6 pt-0 space-y-4 border-t border-[#E8E5F0]">
+          <div>
+            <label className="block text-sm font-medium text-[#6B7280] mb-1">Featured Image URL</label>
+            <input
+              type="text"
+              value={featuredImage}
+              onChange={(e) => setFeaturedImage(e.target.value)}
+              placeholder="https://..."
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+            />
+            {featuredImageSource && (
+              <p className="mt-1.5 text-xs text-[#6B7280]">
+                Source:{" "}
+                <a href={featuredImageSource} target="_blank" rel="noopener noreferrer" className="text-[#7C3AED] hover:underline">Open source link</a>
+              </p>
+            )}
+            {featuredImage && (
+              <div className="mt-2 w-full max-w-sm aspect-video rounded-xl overflow-hidden border border-[#E8E5F0]">
+                <img src={featuredImage} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Author</label>
+              <input
+                type="text"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">Read Time (min)</label>
+              <input
+                type="number"
+                value={readTime}
+                onChange={(e) => setReadTime(Number(e.target.value))}
+                min={1}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#6B7280] mb-1">Tags (comma separated)</label>
+            <input
+              type="text"
+              value={tagsStr}
+              onChange={(e) => setTagsStr(e.target.value)}
+              placeholder="fitness, health, workout"
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#6B7280] mb-1">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as "draft" | "published")}
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+        </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-[#E8E5F0]">
