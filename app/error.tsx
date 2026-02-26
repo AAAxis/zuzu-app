@@ -18,7 +18,7 @@ export default function Error({
   error,
   reset,
 }: {
-  error: unknown
+  error: Error & { digest?: string }
   reset: () => void
 }) {
   const message = getErrorMessage(error)
