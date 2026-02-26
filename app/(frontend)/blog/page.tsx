@@ -35,7 +35,7 @@ export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [category, setCategory] = useState(he.all)
+  const [category, setCategory] = useState<string>(he.all)
   const [lang, setLang] = useState<Lang>("he")
 
   useEffect(() => {
