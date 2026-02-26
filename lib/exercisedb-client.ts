@@ -106,7 +106,7 @@ function normalizeExerciseItem(raw: unknown): ExerciseDBItem {
   const equipment = o.equipment
   const equipments = o.equipments ?? o.equipment_list
   return {
-    ...(o as ExerciseDBItem),
+    ...(o as unknown as ExerciseDBItem),
     name: String(name),
     id: id != null ? String(id) : undefined,
     exerciseId: id != null ? String(id) : undefined,
