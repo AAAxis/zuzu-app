@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Users,
   Image,
+  ShieldCheck,
   LogOut,
   Dumbbell,
   Menu,
@@ -17,6 +18,7 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/users", label: "Users", icon: Users },
+  { href: "/dashboard/admins", label: "Admins", icon: ShieldCheck },
   { href: "/dashboard/gallery", label: "Gallery", icon: Image },
 ]
 

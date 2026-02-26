@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 import { supabaseUrl, supabaseAnonKey } from "./supabase"
 
@@ -33,11 +34,43 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Dashboard requires admin role
+  if (user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey) {
+      const adminClient = createClient(supabaseUrl, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data } = await adminClient.auth.admin.getUserById(user.id)
+      const role = data?.user?.app_metadata?.role
+
+      if (role !== "admin") {
+        // Not an admin — sign them out and redirect to login
+        const url = request.nextUrl.clone()
+        url.pathname = "/login"
+        url.searchParams.set("error", "not_admin")
+        return NextResponse.redirect(url)
+      }
+    }
+  }
+
   // Redirect authenticated users away from login
   if (user && request.nextUrl.pathname === "/login") {
-    const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
-    return NextResponse.redirect(url)
+    // Only redirect if they're an admin
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey) {
+      const adminClient = createClient(supabaseUrl, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data } = await adminClient.auth.admin.getUserById(user.id)
+      const role = data?.user?.app_metadata?.role
+
+      if (role === "admin") {
+        const url = request.nextUrl.clone()
+        url.pathname = "/dashboard"
+        return NextResponse.redirect(url)
+      }
+    }
   }
 
   return supabaseResponse
