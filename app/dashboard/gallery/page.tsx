@@ -500,8 +500,10 @@ function UploadModal({
       if (insertErr) throw new Error(insertErr.message)
 
       onUploaded()
-    } catch (err: any) {
-      setError(err.message || "Upload failed. Please try again.")
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : typeof err === "string" ? err : "Upload failed. Please try again."
+      setError(msg)
       setUploading(false)
     }
   }

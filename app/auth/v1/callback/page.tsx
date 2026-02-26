@@ -35,7 +35,7 @@ export default function AuthCallback() {
 
           if (error) {
             setStatus("error")
-            setMessage(error.message)
+            setMessage(error?.message ?? "Authentication failed.")
             return
           }
 
@@ -96,9 +96,10 @@ export default function AuthCallback() {
 
         setStatus("error")
         setMessage("This link has expired or is invalid. Please request a new one.")
-      } catch (err) {
+      } catch (err: unknown) {
         setStatus("error")
-        setMessage("Something went wrong. Please try again.")
+        const msg = err instanceof Error ? err.message : "Something went wrong. Please try again."
+        setMessage(msg)
       }
     }
 
@@ -121,7 +122,7 @@ export default function AuthCallback() {
     const { error } = await getSupabase().auth.updateUser({ password: newPassword })
 
     if (error) {
-      setMessage(error.message)
+      setMessage(error?.message ?? "An error occurred. Please try again.")
       setUpdating(false)
       return
     }

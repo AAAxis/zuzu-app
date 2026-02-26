@@ -124,7 +124,7 @@ export default function ExercisesPage() {
         exercisedb_variations: row.exercisedb_variations ?? [],
         exercisedb_related_exercises: row.exercisedb_related_exercises ?? [],
       })
-      if (error) throw error
+      if (error) throw new Error(error.message ?? "Failed to save exercise")
       setSavedId(idStr)
       setTimeout(() => setSavedId(null), 2000)
       setMyLibrary((prev) => [

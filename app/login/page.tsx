@@ -36,7 +36,7 @@ function LoginForm() {
     })
 
     if (error) {
-      setError(error.message)
+      setError(error?.message ?? "Sign in failed.")
       setLoading(false)
       return
     }
@@ -55,7 +55,7 @@ function LoginForm() {
     })
 
     if (error) {
-      setError(error.message)
+      setError(error?.message ?? "Failed to send reset email.")
       setLoading(false)
       return
     }
