@@ -26,6 +26,7 @@ import {
   mapToExerciseDefinition,
   type ExerciseDBItem,
 } from "@/lib/exercisedb-client"
+import { ExerciseMedia } from "./ExerciseMedia"
 
 type SearchType = "name" | "bodyPart" | "equipment"
 
@@ -271,17 +272,12 @@ export default function ExercisesPage() {
                     className="flex items-start gap-4 p-4 rounded-xl bg-[#F8F7FF] border border-[#E8E5F0]"
                   >
                     <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-[#E8E5F0] bg-[#E8E5F0]">
-                      {mediaUrl ? (
-                        <img
-                          src={mediaUrl}
-                          alt={name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#6B7280] text-xs">
-                          No image
-                        </div>
-                      )}
+                      <ExerciseMedia
+                        src={mediaUrl}
+                        alt={name}
+                        boxClassName="w-20 h-20"
+                        objectFit="cover"
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[#1a1a2e] truncate">
@@ -365,17 +361,12 @@ export default function ExercisesPage() {
                   className="flex items-center gap-3 p-3 rounded-xl bg-[#F8F7FF] border border-[#E8E5F0]"
                 >
                   <div className="w-14 h-14 rounded-lg overflow-hidden bg-[#E8E5F0] flex-shrink-0">
-                    {mediaUrl ? (
-                      <img
-                        src={mediaUrl}
-                        alt={ex.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Dumbbell className="w-6 h-6 text-[#6B7280]" />
-                      </div>
-                    )}
+                    <ExerciseMedia
+                      src={mediaUrl}
+                      alt={ex.name}
+                      boxClassName="w-14 h-14"
+                      objectFit="cover"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-[#1a1a2e] truncate">
@@ -432,11 +423,12 @@ export default function ExercisesPage() {
                                 <ImageIcon className="w-4 h-4" />
                                 Demo
                               </p>
-                              <div className="rounded-xl overflow-hidden border border-[#E8E5F0] bg-[#F8F7FF]">
-                                <img
+                              <div className="rounded-xl overflow-hidden border border-[#E8E5F0] bg-[#F8F7FF] min-h-[200px]">
+                                <ExerciseMedia
                                   src={mediaUrl}
-                                  alt={selectedExercise.name}
-                                  className="w-full max-h-80 object-contain"
+                                  alt={selectedExercise.name ?? "Exercise"}
+                                  boxClassName="w-full max-h-80"
+                                  objectFit="contain"
                                 />
                               </div>
                             </div>
