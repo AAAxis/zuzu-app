@@ -1,17 +1,41 @@
 /**
  * ExerciseDB API Client (English only)
- * Integration with ExerciseDB API — RapidAPI primary, v2.exercisedb.dev fallback.
+ * In the browser we proxy via Next.js API to avoid CORS; on the server we call APIs directly.
  */
 
 const RAPIDAPI_BASE_URL = "https://exercisedb.p.rapidapi.com"
 const RAPIDAPI_HOST = "exercisedb.p.rapidapi.com"
 const FALLBACK_BASE_URL = "https://v2.exercisedb.dev"
 
+const IS_BROWSER = typeof window !== "undefined"
+
 function getApiKey(): string | undefined {
   if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_EXERCISEDB_RAPIDAPI_KEY) {
     return process.env.NEXT_PUBLIC_EXERCISEDB_RAPIDAPI_KEY
   }
   return undefined
+}
+
+/** Call our Next.js API proxy (no CORS). Used in the browser. */
+async function proxyRequest<T>(payload: {
+  action: string
+  query?: string
+  bodyPart?: string
+  equipment?: string
+  target?: string
+  id?: string
+  limit?: number
+}): Promise<T> {
+  const res = await fetch("/api/exercisedb", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error || res.statusText)
+  }
+  return res.json()
 }
 
 async function makeRapidAPIRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -93,6 +117,10 @@ export interface ExerciseDBItem {
 }
 
 export async function searchExercises(query: string, limit = 20): Promise<ExerciseDBItem[]> {
+  if (IS_BROWSER) {
+    const response = await proxyRequest<unknown>({ action: "search", query, limit })
+    return normalizeArray<ExerciseDBItem>(response)
+  }
   const rapidAPIEndpoint = `/exercises/name/${encodeURIComponent(query)}?limit=${limit}`
   const fallbackEndpoint = `/exercises?name=${encodeURIComponent(query)}&limit=${limit}`
   const response = await makeRequest<unknown>(rapidAPIEndpoint, fallbackEndpoint)
@@ -100,12 +128,19 @@ export async function searchExercises(query: string, limit = 20): Promise<Exerci
 }
 
 export async function getExerciseById(exerciseId: string): Promise<ExerciseDBItem> {
+  if (IS_BROWSER) {
+    return proxyRequest<ExerciseDBItem>({ action: "byId", id: exerciseId })
+  }
   const rapidAPIEndpoint = `/exercises/${exerciseId}`
   const fallbackEndpoint = `/exercises/${exerciseId}`
   return makeRequest<ExerciseDBItem>(rapidAPIEndpoint, fallbackEndpoint)
 }
 
 export async function getExercisesByBodyPart(bodyPart: string, limit = 20): Promise<ExerciseDBItem[]> {
+  if (IS_BROWSER) {
+    const response = await proxyRequest<unknown>({ action: "bodyPart", bodyPart, limit })
+    return normalizeArray<ExerciseDBItem>(response)
+  }
   const normalized = bodyPart.toUpperCase()
   const rapidAPIEndpoint = `/exercises/bodyPart/${encodeURIComponent(normalized)}?limit=${limit}`
   const fallbackEndpoint = `/exercises/bodyPart/${encodeURIComponent(normalized)}?limit=${limit}`
@@ -117,6 +152,10 @@ export async function getExercisesByEquipment(
   equipment: string,
   limit = 20
 ): Promise<ExerciseDBItem[]> {
+  if (IS_BROWSER) {
+    const response = await proxyRequest<unknown>({ action: "equipment", equipment, limit })
+    return normalizeArray<ExerciseDBItem>(response)
+  }
   const normalized = equipment.toUpperCase()
   const rapidAPIEndpoint = `/exercises/equipment/${encodeURIComponent(normalized)}?limit=${limit}`
   const fallbackEndpoint = `/exercises/equipment/${encodeURIComponent(normalized)}?limit=${limit}`
@@ -125,6 +164,10 @@ export async function getExercisesByEquipment(
 }
 
 export async function getExercisesByTarget(target: string, limit = 20): Promise<ExerciseDBItem[]> {
+  if (IS_BROWSER) {
+    const response = await proxyRequest<unknown>({ action: "target", target, limit })
+    return normalizeArray<ExerciseDBItem>(response)
+  }
   const rapidAPIEndpoint = `/exercises/target/${encodeURIComponent(target)}?limit=${limit}`
   const fallbackEndpoint = `/exercises/target/${encodeURIComponent(target)}?limit=${limit}`
   const response = await makeRequest<unknown>(rapidAPIEndpoint, fallbackEndpoint)
