@@ -316,8 +316,8 @@ export default function TrainingBuilderPage() {
           suggested_duration: item.suggested_duration,
           notes: item.notes,
         }
-      })
-      setWorkoutExercises(newExercises.filter((e): e is WorkoutExercise => e !== null))
+      }).filter((x): x is WorkoutExercise => x !== null)
+      setWorkoutExercises(newExercises)
       setEditingTemplate(null)
       setAiModalOpen(false)
       setAiPrompt("")
