@@ -16,11 +16,56 @@ import {
   Plus,
   FileVideo,
   FileImage,
+  Link2,
+  Loader2,
+  ExternalLink,
 } from "lucide-react"
 import type { GalleryItem, GalleryCategory } from "@/lib/types"
 import { GALLERY_CATEGORIES } from "@/lib/types"
 
 const BUCKET = "training-media"
+
+/* ───────── Video URL Helpers ───────── */
+
+function parseVideoUrl(url: string): { provider: "youtube" | "vimeo" | null; videoId: string | null } {
+  // YouTube patterns
+  const ytPatterns = [
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/,
+  ]
+  for (const pattern of ytPatterns) {
+    const match = url.match(pattern)
+    if (match) return { provider: "youtube", videoId: match[1] }
+  }
+
+  // Vimeo patterns
+  const vimeoPatterns = [
+    /vimeo\.com\/(\d+)/,
+    /player\.vimeo\.com\/video\/(\d+)/,
+  ]
+  for (const pattern of vimeoPatterns) {
+    const match = url.match(pattern)
+    if (match) return { provider: "vimeo", videoId: match[1] }
+  }
+
+  return { provider: null, videoId: null }
+}
+
+function getEmbedUrl(provider: "youtube" | "vimeo", videoId: string): string {
+  if (provider === "youtube") return `https://www.youtube.com/embed/${videoId}?autoplay=1`
+  return `https://player.vimeo.com/video/${videoId}?autoplay=1`
+}
+
+function getThumbnailUrl(provider: "youtube" | "vimeo", videoId: string): string {
+  if (provider === "youtube") return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+  // Vimeo thumbnails require API call, use a placeholder approach
+  return ""
+}
+
+function isExternalVideoUrl(url: string): boolean {
+  const { provider } = parseVideoUrl(url)
+  return provider !== null
+}
 
 export default function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([])
@@ -29,6 +74,7 @@ export default function GalleryPage() {
   const [activeCategory, setActiveCategory] = useState<GalleryCategory>("All")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showUpload, setShowUpload] = useState(false)
+  const [showVideoLink, setShowVideoLink] = useState(false)
   const [previewItem, setPreviewItem] = useState<GalleryItem | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
@@ -52,11 +98,17 @@ export default function GalleryPage() {
     setDeleting(item.id)
     const supabase = getSupabase()
 
-    // Extract file path from URL
-    const url = new URL(item.media_url)
-    const pathParts = url.pathname.split(`/${BUCKET}/`)
-    if (pathParts[1]) {
-      await supabase.storage.from(BUCKET).remove([pathParts[1]])
+    // Only delete from storage if it's NOT an external video link
+    if (!isExternalVideoUrl(item.media_url)) {
+      try {
+        const url = new URL(item.media_url)
+        const pathParts = url.pathname.split(`/${BUCKET}/`)
+        if (pathParts[1]) {
+          await supabase.storage.from(BUCKET).remove([pathParts[1]])
+        }
+      } catch {
+        // URL parsing failed, skip storage cleanup
+      }
     }
 
     await supabase.from("training_gallery").delete().eq("id", item.id)
@@ -101,13 +153,22 @@ export default function GalleryPage() {
             {videoCount !== 1 && "s"}
           </p>
         </div>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#7C3AED] text-white rounded-xl text-sm font-medium hover:bg-[#6D28D9] transition-colors shadow-lg shadow-purple-500/20"
-        >
-          <Plus className="w-4 h-4" />
-          Upload Media
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowVideoLink(true)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-[#E8E5F0] bg-white text-[#1a1a2e] rounded-xl text-sm font-medium hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
+          >
+            <Link2 className="w-4 h-4" />
+            Add Video Link
+          </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#7C3AED] text-white rounded-xl text-sm font-medium hover:bg-[#6D28D9] transition-colors shadow-lg shadow-purple-500/20"
+          >
+            <Upload className="w-4 h-4" />
+            Upload File
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -197,28 +258,49 @@ export default function GalleryPage() {
                     alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                      <Play className="w-6 h-6 text-white ml-1" />
+                ) : (() => {
+                  const { provider, videoId } = parseVideoUrl(item.media_url)
+                  const thumb = provider && videoId ? getThumbnailUrl(provider, videoId) : item.thumbnail_url
+                  return thumb ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={thumb}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                          <Play className="w-6 h-6 text-white ml-1" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                        <Play className="w-6 h-6 text-white ml-1" />
+                      </div>
+                    </div>
+                  )
+                })()}
                 {/* Type badge */}
                 <div className="absolute top-2 left-2">
                   <span
                     className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium backdrop-blur-sm ${
                       item.media_type === "photo"
                         ? "bg-green-500/80 text-white"
-                        : "bg-purple-500/80 text-white"
+                        : isExternalVideoUrl(item.media_url)
+                          ? "bg-red-500/80 text-white"
+                          : "bg-purple-500/80 text-white"
                     }`}
                   >
                     {item.media_type === "photo" ? (
                       <FileImage className="w-3 h-3" />
+                    ) : isExternalVideoUrl(item.media_url) ? (
+                      <Link2 className="w-3 h-3" />
                     ) : (
                       <FileVideo className="w-3 h-3" />
                     )}
-                    {item.media_type}
+                    {item.media_type === "photo" ? "photo" : isExternalVideoUrl(item.media_url) ? parseVideoUrl(item.media_url).provider || "link" : "video"}
                   </span>
                 </div>
                 {/* Delete button */}
@@ -266,11 +348,22 @@ export default function GalleryPage() {
                     alt={item.title}
                     className="w-full h-full object-cover"
                   />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
-                    <Play className="w-5 h-5 text-white ml-0.5" />
-                  </div>
-                )}
+                ) : (() => {
+                  const { provider, videoId } = parseVideoUrl(item.media_url)
+                  const thumb = provider && videoId ? getThumbnailUrl(provider, videoId) : item.thumbnail_url
+                  return thumb ? (
+                    <div className="relative w-full h-full">
+                      <img src={thumb} alt={item.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <Play className="w-5 h-5 text-white ml-0.5" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
+                      <Play className="w-5 h-5 text-white ml-0.5" />
+                    </div>
+                  )
+                })()}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[#1a1a2e] truncate">
@@ -283,14 +376,22 @@ export default function GalleryPage() {
                 )}
                 <div className="flex items-center gap-3 mt-1">
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-medium ${item.media_type === "photo" ? "text-green-600" : "text-purple-600"}`}
+                    className={`inline-flex items-center gap-1 text-xs font-medium ${
+                      item.media_type === "photo"
+                        ? "text-green-600"
+                        : isExternalVideoUrl(item.media_url)
+                          ? "text-red-600"
+                          : "text-purple-600"
+                    }`}
                   >
                     {item.media_type === "photo" ? (
                       <FileImage className="w-3 h-3" />
+                    ) : isExternalVideoUrl(item.media_url) ? (
+                      <Link2 className="w-3 h-3" />
                     ) : (
                       <FileVideo className="w-3 h-3" />
                     )}
-                    {item.media_type}
+                    {item.media_type === "photo" ? "photo" : isExternalVideoUrl(item.media_url) ? parseVideoUrl(item.media_url).provider || "link" : "video"}
                   </span>
                   <span className="text-xs text-[#6B7280]">
                     {item.category}
@@ -328,6 +429,17 @@ export default function GalleryPage() {
         />
       )}
 
+      {/* Video Link Modal */}
+      {showVideoLink && (
+        <VideoLinkModal
+          onClose={() => setShowVideoLink(false)}
+          onAdded={() => {
+            setShowVideoLink(false)
+            loadGallery()
+          }}
+        />
+      )}
+
       {/* Preview Modal */}
       {previewItem && (
         <div
@@ -346,14 +458,29 @@ export default function GalleryPage() {
                   alt={previewItem.title}
                   className="w-full max-h-[60vh] object-contain"
                 />
-              ) : (
-                <video
-                  src={previewItem.media_url}
-                  controls
-                  autoPlay
-                  className="w-full max-h-[60vh]"
-                />
-              )}
+              ) : (() => {
+                const { provider, videoId } = parseVideoUrl(previewItem.media_url)
+                if (provider && videoId) {
+                  return (
+                    <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                      <iframe
+                        src={getEmbedUrl(provider, videoId)}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full"
+                      />
+                    </div>
+                  )
+                }
+                return (
+                  <video
+                    src={previewItem.media_url}
+                    controls
+                    autoPlay
+                    className="w-full max-h-[60vh]"
+                  />
+                )
+              })()}
               <button
                 onClick={() => setPreviewItem(null)}
                 className="absolute top-3 right-3 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
@@ -657,6 +784,218 @@ function UploadModal({
               <>
                 <Upload className="w-4 h-4" />
                 Upload
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ───────── Video Link Modal Component ───────── */
+
+function VideoLinkModal({
+  onClose,
+  onAdded,
+}: {
+  onClose: () => void
+  onAdded: () => void
+}) {
+  const [url, setUrl] = useState("")
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [category, setCategory] = useState("Strength")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const [detected, setDetected] = useState<{ provider: "youtube" | "vimeo"; videoId: string } | null>(null)
+
+  function handleUrlChange(value: string) {
+    setUrl(value)
+    setError("")
+    const { provider, videoId } = parseVideoUrl(value)
+    if (provider && videoId) {
+      setDetected({ provider, videoId })
+    } else {
+      setDetected(null)
+    }
+  }
+
+  async function handleSave() {
+    if (!url.trim() || !title.trim()) return
+
+    const { provider, videoId } = parseVideoUrl(url.trim())
+    if (!provider || !videoId) {
+      setError("Please enter a valid YouTube or Vimeo URL")
+      return
+    }
+
+    setSaving(true)
+    setError("")
+
+    try {
+      const supabase = getSupabase()
+      const thumbnailUrl = getThumbnailUrl(provider, videoId)
+
+      const { error: insertErr } = await supabase
+        .from("training_gallery")
+        .insert({
+          title: title.trim(),
+          description: description.trim() || null,
+          media_type: "video",
+          media_url: url.trim(),
+          thumbnail_url: thumbnailUrl || null,
+          category,
+        })
+
+      if (insertErr) throw new Error(insertErr.message)
+
+      onAdded()
+    } catch (err: any) {
+      setError(err.message || "Failed to save. Please try again.")
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-bold text-[#1a1a2e]">Add Video Link</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 text-[#6B7280]"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* URL input */}
+        <div>
+          <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+            Video URL
+          </label>
+          <div className="relative">
+            <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+            />
+          </div>
+          <p className="text-xs text-[#6B7280] mt-1.5">
+            Supports YouTube and Vimeo links
+          </p>
+        </div>
+
+        {/* Video preview */}
+        {detected && (
+          <div className="mt-4 rounded-xl overflow-hidden border border-[#E8E5F0]">
+            {detected.provider === "youtube" ? (
+              <img
+                src={getThumbnailUrl(detected.provider, detected.videoId)}
+                alt="Video thumbnail"
+                className="w-full aspect-video object-cover"
+              />
+            ) : (
+              <div className="w-full aspect-video bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
+                <Play className="w-10 h-10 text-white ml-1" />
+              </div>
+            )}
+            <div className="px-3 py-2 bg-[#F8F7FF] flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-600 uppercase">
+                {detected.provider}
+              </span>
+              <span className="text-xs text-[#6B7280] truncate">
+                Video ID: {detected.videoId}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Form fields */}
+        <div className="mt-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+              Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Squat Form Tutorial"
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+              Description{" "}
+              <span className="text-[#6B7280] font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe this video..."
+              rows={3}
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+              Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] bg-white"
+            >
+              {GALLERY_CATEGORIES.filter((c) => c !== "All").map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-medium text-[#6B7280] hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!url.trim() || !title.trim() || !detected || saving}
+            className="flex-1 py-2.5 rounded-xl bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Link2 className="w-4 h-4" />
+                Add Video
               </>
             )}
           </button>
