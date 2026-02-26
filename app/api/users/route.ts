@@ -55,6 +55,7 @@ export async function GET() {
       daily_steps: profile?.daily_steps || null,
       goal: profile?.goal || null,
       has_profile: !!profile,
+      role: authUser.app_metadata?.role || null,
       created_at: authUser.created_at,
       last_sign_in_at: authUser.last_sign_in_at || null,
       email_confirmed_at: authUser.email_confirmed_at || null,

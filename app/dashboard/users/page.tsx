@@ -26,6 +26,7 @@ interface AuthUser {
   daily_steps: number | null
   goal: string | null
   has_profile: boolean
+  role: string | null
   created_at: string
   last_sign_in_at: string | null
   email_confirmed_at: string | null
@@ -43,6 +44,7 @@ export default function UsersPage() {
   const [sortField, setSortField] = useState<SortField>("created_at")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null)
+  const [settingAdminId, setSettingAdminId] = useState<string | null>(null)
 
   useEffect(() => {
     loadUsers()
@@ -120,6 +122,26 @@ export default function UsersPage() {
       hour: "numeric",
       minute: "2-digit",
     })
+  }
+
+  async function handleSetAdmin(user: AuthUser) {
+    if (user.role === "admin") return
+    setSettingAdminId(user.id)
+    try {
+      const res = await fetch("/api/users/set-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to set admin")
+      await loadUsers()
+      setSelectedUser((prev) => (prev?.id === user.id ? { ...prev, role: "admin" } : prev))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to set admin")
+    } finally {
+      setSettingAdminId(null)
+    }
   }
 
   if (loading) {
@@ -267,6 +289,9 @@ export default function UsersPage() {
                       Last Sign In <SortIcon field="last_sign_in_at" />
                     </button>
                   </th>
+                  <th className="text-right px-5 py-3 font-semibold text-[#6B7280]">
+                    Role
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -309,6 +334,12 @@ export default function UsersPage() {
                             Profile
                           </span>
                         )}
+                        {user.role === "admin" && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#7C3AED] text-white w-fit">
+                            <ShieldCheck className="w-3 h-3" />
+                            Admin
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-4 hidden md:table-cell">
@@ -321,6 +352,30 @@ export default function UsersPage() {
                     </td>
                     <td className="px-5 py-4 text-[#6B7280] hidden lg:table-cell">
                       {formatDate(user.last_sign_in_at)}
+                    </td>
+                    <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      {user.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#7C3AED] text-white">
+                          <ShieldCheck className="w-3 h-3" />
+                          Admin
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSetAdmin(user)}
+                          disabled={settingAdminId === user.id}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#F3F0FF] text-[#7C3AED] hover:bg-[#E8E5F0] disabled:opacity-50 transition-colors"
+                        >
+                          {settingAdminId === user.id ? (
+                            <>Setting...</>
+                          ) : (
+                            <>
+                              <ShieldCheck className="w-3 h-3" />
+                              Set admin
+                            </>
+                          )}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -384,7 +439,41 @@ export default function UsersPage() {
                 <span className="text-sm text-[#6B7280]">App Profile</span>
                 <span className="text-sm font-medium text-[#1a1a2e]">{selectedUser.has_profile ? "Yes" : "No"}</span>
               </div>
+              <div className="flex items-center justify-between py-2 border-b border-[#E8E5F0]">
+                <span className="text-sm text-[#6B7280]">Role</span>
+                <span className="text-sm font-medium text-[#1a1a2e]">
+                  {selectedUser.role === "admin" ? (
+                    <span className="inline-flex items-center gap-1 text-[#7C3AED]">
+                      <ShieldCheck className="w-4 h-4" />
+                      Admin
+                    </span>
+                  ) : (
+                    "User"
+                  )}
+                </span>
+              </div>
             </div>
+
+            {selectedUser.role !== "admin" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleSetAdmin(selectedUser)
+                }}
+                disabled={settingAdminId === selectedUser.id}
+                className="w-full py-2.5 rounded-xl border-2 border-[#7C3AED] text-[#7C3AED] text-sm font-medium hover:bg-[#F3F0FF] disabled:opacity-50 transition-colors flex items-center justify-center gap-2 mb-4"
+              >
+                {settingAdminId === selectedUser.id ? (
+                  "Setting admin..."
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    Set as admin
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Profile data if available */}
             {selectedUser.has_profile && (
