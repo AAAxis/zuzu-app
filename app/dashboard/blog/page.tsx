@@ -12,7 +12,6 @@ import {
   Sparkles,
   ChevronDown,
   ExternalLink,
-  Languages,
   X,
 } from "lucide-react"
 
@@ -32,6 +31,7 @@ interface BlogPost {
   read_time: number
   tags: string[]
   status: "draft" | "published"
+  featured_image_source?: string
   translations: {
     he?: { title?: string; excerpt?: string; content?: string }
     en?: { title?: string; excerpt?: string; content?: string }
@@ -325,6 +325,7 @@ function BlogEditorModal({
   const [excerpt, setExcerpt] = useState("")
   const [content, setContent] = useState("")
   const [featuredImage, setFeaturedImage] = useState("")
+  const [featuredImageSource, setFeaturedImageSource] = useState("")
   const [category, setCategory] = useState("Fitness")
   const [author, setAuthor] = useState("ZUZU Team")
   const [readTime, setReadTime] = useState(5)
@@ -340,8 +341,8 @@ function BlogEditorModal({
   const [enContent, setEnContent] = useState("")
 
   const [saving, setSaving] = useState(false)
-  const [translating, setTranslating] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [generatePrompt, setGeneratePrompt] = useState("")
   const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState<"content" | "translations">("content")
 
@@ -352,6 +353,7 @@ function BlogEditorModal({
       setExcerpt(post.excerpt || "")
       setContent(post.content || "")
       setFeaturedImage(post.featured_image || "")
+      setFeaturedImageSource(post.featured_image_source || "")
       setCategory(post.category || "Fitness")
       setAuthor(post.author || "ZUZU Team")
       setReadTime(post.read_time || 5)
@@ -408,6 +410,7 @@ function BlogEditorModal({
       excerpt,
       content,
       featured_image: featuredImage,
+      featured_image_source: featuredImageSource || undefined,
       category,
       author,
       read_time: readTime,
@@ -434,50 +437,6 @@ function BlogEditorModal({
     onSaved()
   }
 
-  async function handleTranslate() {
-    if (!title.trim() && !content.trim()) {
-      setError("Write some content first before translating")
-      return
-    }
-    setTranslating(true)
-    setError("")
-
-    // If writing in English, translate to Hebrew. If Hebrew, translate to English.
-    const targetLang = lang === "en" ? "he" : "en"
-
-    const res = await fetch("/api/blog/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        excerpt,
-        content,
-        from: lang,
-        to: targetLang,
-      }),
-    })
-
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      setError(data.error || "Translation failed")
-      setTranslating(false)
-      return
-    }
-
-    if (targetLang === "he") {
-      setHeTitle(data.title || "")
-      setHeExcerpt(data.excerpt || "")
-      setHeContent(data.content || "")
-    } else {
-      setEnTitle(data.title || "")
-      setEnExcerpt(data.excerpt || "")
-      setEnContent(data.content || "")
-    }
-
-    setTranslating(false)
-    setActiveTab("translations")
-  }
-
   async function handleGenerate() {
     setGenerating(true)
     setError("")
@@ -485,7 +444,7 @@ function BlogEditorModal({
     const res = await fetch("/api/blog/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language: lang }),
+      body: JSON.stringify({ topic: generatePrompt.trim(), language: lang }),
     })
 
     const data = await res.json().catch(() => ({}))
@@ -504,6 +463,35 @@ function BlogEditorModal({
     if (data.featured_image) {
       setFeaturedImage(data.featured_image)
     }
+    if (data.featured_image_source) {
+      setFeaturedImageSource(data.featured_image_source)
+    }
+
+    // Auto-translate to the other language
+    const targetLang = lang === "en" ? "he" : "en"
+    const translateRes = await fetch("/api/blog/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: data.title || "",
+        excerpt: data.excerpt || "",
+        content: data.content || "",
+        from: lang,
+        to: targetLang,
+      }),
+    })
+    const translateData = await translateRes.json().catch(() => ({}))
+    if (translateRes.ok) {
+      if (targetLang === "he") {
+        setHeTitle(translateData.title || "")
+        setHeExcerpt(translateData.excerpt || "")
+        setHeContent(translateData.content || "")
+      } else {
+        setEnTitle(translateData.title || "")
+        setEnExcerpt(translateData.excerpt || "")
+        setEnContent(translateData.content || "")
+      }
+    }
 
     setGenerating(false)
   }
@@ -515,46 +503,38 @@ function BlogEditorModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#E8E5F0]">
-          <h2 className="text-xl font-bold text-[#1a1a2e]">
-            {isEdit ? "Edit Post" : "New Blog Post"}
-          </h2>
-          <div className="flex items-center gap-2">
-            {/* Auto-generate button */}
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {generating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="w-3.5 h-3.5" />
-              )}
-              {generating ? "Generating..." : "Auto Generate"}
-            </button>
-            {/* Translate button */}
-            <button
-              onClick={handleTranslate}
-              disabled={translating}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500 text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {translating ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Languages className="w-3.5 h-3.5" />
-              )}
-              {translating
-                ? "Translating..."
-                : lang === "en"
-                ? "Translate → Hebrew"
-                : "Translate → English"}
-            </button>
+        <div className="flex flex-col gap-3 p-6 border-b border-[#E8E5F0]">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-[#1a1a2e]">
+              {isEdit ? "Edit Post" : "New Blog Post"}
+            </h2>
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-gray-100 text-[#6B7280]"
             >
               <X className="w-5 h-5" />
+            </button>
+          </div>
+          {/* Generate: prompt + button */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={generatePrompt}
+              onChange={(e) => setGeneratePrompt(e.target.value)}
+              placeholder="e.g. benefits of morning runs, healthy meal prep, HIIT for beginners"
+              className="flex-1 px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 disabled:opacity-50 transition-opacity shrink-0"
+            >
+              {generating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              {generating ? "Generating..." : "Auto Generate"}
             </button>
           </div>
         </div>
@@ -654,6 +634,19 @@ function BlogEditorModal({
                 placeholder="https://..."
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
               />
+              {featuredImageSource && (
+                <p className="mt-1.5 text-xs text-[#6B7280]">
+                  Source:{" "}
+                  <a
+                    href={featuredImageSource}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#7C3AED] hover:underline"
+                  >
+                    Open source link
+                  </a>
+                </p>
+              )}
               {featuredImage && (
                 <div className="mt-2 w-full max-w-sm aspect-video rounded-xl overflow-hidden border border-[#E8E5F0]">
                   <img

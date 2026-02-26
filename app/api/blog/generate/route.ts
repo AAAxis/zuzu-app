@@ -97,6 +97,7 @@ Return ONLY valid JSON, no markdown fences or extra text.`,
 
     // Try to fetch image from Pixabay
     let featured_image = ""
+    let featured_image_source = ""
     const pixabayKey = process.env.PIXABAY_API_KEY
     const imageQuery = generated.image_query || generated.category || "fitness"
 
@@ -112,7 +113,9 @@ Return ONLY valid JSON, no markdown fences or extra text.`,
           if (pxData.hits && pxData.hits.length > 0) {
             // Pick a random one from top 5
             const idx = Math.floor(Math.random() * Math.min(5, pxData.hits.length))
-            featured_image = pxData.hits[idx].webformatURL || pxData.hits[idx].largeImageURL || ""
+            const hit = pxData.hits[idx]
+            featured_image = hit.webformatURL || hit.largeImageURL || ""
+            featured_image_source = hit.pageURL || ""
           }
         }
       } catch {
@@ -128,6 +131,7 @@ Return ONLY valid JSON, no markdown fences or extra text.`,
       tags: generated.tags || [],
       read_time: generated.read_time || 5,
       featured_image,
+      featured_image_source,
       image_query: imageQuery,
     })
   } catch (err) {

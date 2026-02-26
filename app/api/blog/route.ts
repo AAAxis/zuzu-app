@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       excerpt: body.excerpt || "",
       content: body.content || "",
       featured_image: body.featured_image || "",
+      featured_image_source: body.featured_image_source || "",
       category: body.category || "",
       author: body.author || "ZUZU Team",
       read_time: body.read_time || 5,
@@ -109,6 +110,7 @@ export async function PATCH(request: NextRequest) {
     if (body.excerpt !== undefined) updates.excerpt = body.excerpt
     if (body.content !== undefined) updates.content = body.content
     if (body.featured_image !== undefined) updates.featured_image = body.featured_image
+    if (body.featured_image_source !== undefined) updates.featured_image_source = body.featured_image_source
     if (body.category !== undefined) updates.category = body.category
     if (body.author !== undefined) updates.author = body.author
     if (body.read_time !== undefined) updates.read_time = body.read_time
