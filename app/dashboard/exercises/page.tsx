@@ -13,6 +13,10 @@ import {
   CheckCircle,
   X,
   Dumbbell,
+  Plus,
+  ImagePlus,
+  Play,
+  Trash2,
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import {
@@ -27,14 +31,20 @@ import {
   type ExerciseDBItem,
 } from "@/lib/exercisedb-client"
 import { ExerciseMedia } from "./ExerciseMedia"
+import type { GalleryItem } from "@/lib/types"
 
 type SearchType = "name" | "bodyPart" | "equipment"
+
+const MUSCLE_GROUPS = ["Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body", "Other"]
+const EQUIPMENT_OPTIONS = ["Bodyweight", "Dumbbell", "Barbell", "Kettlebell", "Machine", "Band", "Cable", "Other"]
+const EXERCISE_CATEGORIES = ["Strength", "Cardio", "Yoga", "HIIT", "Stretching", "Functional", "Other"]
 
 interface SavedExercise {
   id: string
   name: string
   muscle_group: string | null
   equipment: string | null
+  video_url: string | null
   exercisedb_gif_url: string | null
   exercisedb_image_url: string | null
 }
@@ -54,6 +64,7 @@ export default function ExercisesPage() {
   const [myLibrary, setMyLibrary] = useState<SavedExercise[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     Promise.all([getBodyPartsEnglish(), getEquipmentListEnglish()]).then(
@@ -69,7 +80,7 @@ export default function ExercisesPage() {
       setLibraryLoading(true)
       const { data } = await getSupabase()
         .from("exercise_definitions")
-        .select("id, name, muscle_group, equipment, exercisedb_gif_url, exercisedb_image_url")
+        .select("id, name, muscle_group, equipment, video_url, exercisedb_gif_url, exercisedb_image_url")
         .order("name")
       setMyLibrary((data as SavedExercise[]) ?? [])
       setLibraryLoading(false)
@@ -142,6 +153,7 @@ export default function ExercisesPage() {
           name: row.name,
           muscle_group: row.muscle_group,
           equipment: row.equipment,
+          video_url: row.video_url || null,
           exercisedb_gif_url: row.exercisedb_gif_url || null,
           exercisedb_image_url: row.exercisedb_image_url || null,
         },
@@ -164,14 +176,24 @@ export default function ExercisesPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-[#1a1a2e] flex items-center gap-2">
-          <Dumbbell className="w-8 h-8 text-[#7C3AED]" />
-          Exercise Library
-        </h1>
-        <p className="text-[#6B7280] mt-1">
-          Search 11,000+ exercises from ExerciseDB. Save favorites to your library (Supabase).
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#1a1a2e] flex items-center gap-2">
+            <Dumbbell className="w-8 h-8 text-[#7C3AED]" />
+            Exercise Library
+          </h1>
+          <p className="text-[#6B7280] mt-1">
+            Search 11,000+ exercises or create your own custom exercises.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#7C3AED] text-white rounded-xl text-sm font-medium hover:bg-[#6D28D9] transition-colors shadow-lg shadow-purple-500/20 whitespace-nowrap"
+        >
+          <Plus className="w-4 h-4" />
+          Create My Own
+        </button>
       </div>
 
       {/* Search */}
@@ -369,7 +391,7 @@ export default function ExercisesPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
             {myLibrary.map((ex) => {
               const mediaUrl =
-                ex.exercisedb_gif_url || ex.exercisedb_image_url || null
+                ex.exercisedb_gif_url || ex.exercisedb_image_url || (ex.video_url && !ex.video_url.includes("youtube") && !ex.video_url.includes("vimeo") ? ex.video_url : null)
               return (
                 <div
                   key={ex.id}
@@ -397,6 +419,17 @@ export default function ExercisesPage() {
           </div>
         )}
       </div>
+
+      {/* Create My Own Modal */}
+      {showCreateModal && (
+        <CreateExerciseModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={(newEx) => {
+            setShowCreateModal(false)
+            setMyLibrary((prev) => [...prev, newEx])
+          }}
+        />
+      )}
 
       {/* Detail modal */}
       <AnimatePresence>

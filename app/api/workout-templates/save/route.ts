@@ -43,7 +43,6 @@ export async function POST(request: Request) {
     part_1_exercises?: unknown[]
     part_2_exercises?: unknown[]
     part_3_exercises?: unknown[]
-    updated_at?: string
   }
   try {
     body = await request.json()
@@ -67,7 +66,6 @@ export async function POST(request: Request) {
     part_1_exercises: body.part_1_exercises ?? [],
     part_2_exercises: body.part_2_exercises ?? [],
     part_3_exercises: body.part_3_exercises ?? [],
-    updated_at: body.updated_at ?? new Date().toISOString(),
   }
 
   const adminClient = createClient(supabaseUrl, serviceKey, {
