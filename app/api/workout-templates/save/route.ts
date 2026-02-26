@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { supabaseUrl, supabaseAnonKey } from "@/lib/supabase"
+import { translateManyToHebrew } from "@/lib/translate"
 
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -58,15 +59,31 @@ export async function POST(request: Request) {
     )
   }
 
+  const workoutTitle = body.workout_title?.trim() || templateName
+  const workoutDescription = body.workout_description ?? ""
+
+  const he = await translateManyToHebrew([
+    { key: "template_name", text: templateName },
+    { key: "workout_title", text: workoutTitle },
+    { key: "workout_description", text: workoutDescription },
+  ])
+
   const now = new Date().toISOString()
   const basePayload = {
     created_by: body.created_by ?? user.email,
     template_name: templateName,
-    workout_title: body.workout_title ?? "Custom workout",
-    workout_description: body.workout_description ?? "",
+    workout_title: workoutTitle,
+    workout_description: workoutDescription,
     part_1_exercises: body.part_1_exercises ?? [],
     part_2_exercises: body.part_2_exercises ?? [],
     part_3_exercises: body.part_3_exercises ?? [],
+    translations: {
+      he: {
+        template_name: he.template_name || templateName,
+        workout_title: he.workout_title || workoutTitle,
+        workout_description: he.workout_description || workoutDescription,
+      },
+    },
   }
 
   const adminClient = createClient(supabaseUrl, serviceKey, {

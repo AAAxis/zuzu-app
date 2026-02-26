@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
+import { getDisplayName, getTranslated, DEFAULT_LOCALE } from "@/lib/locale"
 
 interface ExerciseDef {
   id: string
@@ -28,6 +29,7 @@ interface ExerciseDef {
   exercisedb_gif_url: string | null
   exercisedb_image_url: string | null
   description: string | null
+  translations?: { he?: { name?: string; description?: string; muscle_group?: string; equipment?: string } } | null
 }
 
 interface WorkoutExercise {
@@ -54,6 +56,7 @@ interface WorkoutTemplateRow {
   part_2_exercises: WorkoutExercise[]
   part_3_exercises: WorkoutExercise[]
   updated_at?: string
+  translations?: { he?: { template_name?: string; workout_title?: string; workout_description?: string } } | null
 }
 
 const PART_LABELS: Record<string, string> = {
@@ -88,7 +91,7 @@ export default function TrainingBuilderPage() {
       setUser(u ?? null)
 
       const [defsRes, tplsRes] = await Promise.all([
-        supabase.from("exercise_definitions").select("id, name, muscle_group, equipment, video_url, exercisedb_gif_url, exercisedb_image_url, description").order("name"),
+        supabase.from("exercise_definitions").select("id, name, muscle_group, equipment, video_url, exercisedb_gif_url, exercisedb_image_url, description, translations").order("name"),
         u ? supabase.from("workout_templates").select("*").eq("created_by", u.email!).order("template_name") : Promise.resolve({ data: [] }),
       ])
 
@@ -132,9 +135,13 @@ export default function TrainingBuilderPage() {
   }
 
   const filteredExercises = exerciseDefinitions.filter(
-    (ex) =>
-      ex.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (ex.muscle_group?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    (ex) => {
+      const term = searchTerm.toLowerCase()
+      const nameMatch = ex.name.toLowerCase().includes(term)
+      const heName = ex.translations?.he?.name?.toLowerCase().includes(term)
+      const muscleMatch = (ex.muscle_group?.toLowerCase().includes(term) ?? false)
+      return nameMatch || heName || muscleMatch
+    }
   )
 
   const saveTemplate = async () => {
@@ -329,6 +336,11 @@ export default function TrainingBuilderPage() {
     part_3_exercises: workoutExercises.filter((e) => e.part === "part_3_exercises"),
   }
 
+  function getWorkoutExerciseDisplayName(we: WorkoutExercise): string {
+    const def = exerciseDefinitions.find((d) => d.id === we.definitionId)
+    return def ? getDisplayName(def, DEFAULT_LOCALE) : we.name
+  }
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -408,8 +420,8 @@ export default function TrainingBuilderPage() {
                       onClick={() => addExercise(ex)}
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-[#1a1a2e] truncate">{ex.name}</p>
-                        <p className="text-xs text-[#6B7280] truncate">{ex.muscle_group ?? ex.equipment ?? ""}</p>
+                        <p className="font-medium text-sm text-[#1a1a2e] truncate">{getDisplayName(ex, DEFAULT_LOCALE)}</p>
+                        <p className="text-xs text-[#6B7280] truncate">{getTranslated(ex, "muscle_group", DEFAULT_LOCALE) || getTranslated(ex, "equipment", DEFAULT_LOCALE) || ""}</p>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
                         {ex.video_url && (
@@ -417,7 +429,7 @@ export default function TrainingBuilderPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              setVideoModal({ open: true, url: ex.video_url!, title: ex.name })
+                              setVideoModal({ open: true, url: ex.video_url!, title: getDisplayName(ex, DEFAULT_LOCALE) })
                             }}
                             className="p-1.5 rounded-lg text-[#7C3AED] hover:bg-[#F3F0FF]"
                             title="Video"
@@ -466,7 +478,7 @@ export default function TrainingBuilderPage() {
                   <option value="">Load template</option>
                   {templates.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.template_name}
+                      {getTranslated(t, "template_name", DEFAULT_LOCALE) || t.template_name}
                     </option>
                   ))}
                 </select>
@@ -488,7 +500,7 @@ export default function TrainingBuilderPage() {
                     key={t.id}
                     className="inline-flex items-center gap-1 bg-[#F8F7FF] rounded-lg px-3 py-1.5 text-sm"
                   >
-                    <span className="font-medium text-[#1a1a2e]">{t.template_name}</span>
+                    <span className="font-medium text-[#1a1a2e]">{getTranslated(t, "template_name", DEFAULT_LOCALE) || t.template_name}</span>
                     <button
                       type="button"
                       onClick={() => loadTemplate(t, true)}
@@ -527,11 +539,11 @@ export default function TrainingBuilderPage() {
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-2">
-                                <p className="font-semibold text-[#1a1a2e]">{ex.name}</p>
+                                <p className="font-semibold text-[#1a1a2e]">{getWorkoutExerciseDisplayName(ex)}</p>
                                 {ex.video_url && (
                                   <button
                                     type="button"
-                                    onClick={() => setVideoModal({ open: true, url: ex.video_url!, title: ex.name })}
+                                    onClick={() => setVideoModal({ open: true, url: ex.video_url!, title: getWorkoutExerciseDisplayName(ex) })}
                                     className="p-1 text-[#7C3AED] rounded hover:bg-white"
                                   >
                                     <Video className="w-4 h-4" />
@@ -630,10 +642,10 @@ export default function TrainingBuilderPage() {
       {selectedExerciseInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedExerciseInfo(null)}>
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-bold text-[#1a1a2e] mb-1">{selectedExerciseInfo.name}</h3>
-            <p className="text-sm text-[#6B7280] mb-4">{selectedExerciseInfo.muscle_group ?? selectedExerciseInfo.equipment ?? ""}</p>
-            {selectedExerciseInfo.description && (
-              <p className="text-sm text-[#1a1a2e] whitespace-pre-wrap mb-4">{selectedExerciseInfo.description}</p>
+            <h3 className="text-xl font-bold text-[#1a1a2e] mb-1">{selectedExerciseInfo ? getDisplayName(selectedExerciseInfo, DEFAULT_LOCALE) : ""}</h3>
+            <p className="text-sm text-[#6B7280] mb-4">{selectedExerciseInfo ? (getTranslated(selectedExerciseInfo, "muscle_group", DEFAULT_LOCALE) || getTranslated(selectedExerciseInfo, "equipment", DEFAULT_LOCALE) || "") : ""}</p>
+            {selectedExerciseInfo?.description && (
+              <p className="text-sm text-[#1a1a2e] whitespace-pre-wrap mb-4">{getTranslated(selectedExerciseInfo, "description", DEFAULT_LOCALE) || selectedExerciseInfo.description}</p>
             )}
             <button
               type="button"

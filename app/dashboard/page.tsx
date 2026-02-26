@@ -68,8 +68,8 @@ export default function DashboardOverview() {
 
     const usersData = await usersRes.json().catch(() => ({}))
     if (!usersRes.ok) {
-      console.error("[Dashboard] /api/users failed:", usersRes.status, usersData)
-      setError(`Failed to load users: ${usersData.error || usersRes.statusText}`)
+      console.error("[Dashboard] /api/users failed:", usersRes.status, JSON.stringify(usersData))
+      setError(`Failed to load users (${usersRes.status}): ${usersData.detail || usersData.error || usersRes.statusText}`)
     }
     const users: ApiUser[] = usersRes.ok && Array.isArray(usersData.users) ? usersData.users : []
     const gallery = (galleryRes.data as GalleryItem[]) || []

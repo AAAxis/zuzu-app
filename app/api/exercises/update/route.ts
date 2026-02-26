@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { supabaseUrl, supabaseAnonKey } from "@/lib/supabase"
+import { translateManyToHebrew } from "@/lib/translate"
 
 export async function PATCH(request: Request) {
   const cookieStore = await cookies()
@@ -37,7 +38,6 @@ export async function PATCH(request: Request) {
   let body: {
     id?: string
     name?: string
-    name_he?: string | null
     muscle_group?: string | null
     category?: string | null
     equipment?: string | null
@@ -69,13 +69,19 @@ export async function PATCH(request: Request) {
     )
   }
 
+  const he = await translateManyToHebrew([
+    { key: "name", text: name },
+    { key: "description", text: body.description ?? "" },
+    { key: "muscle_group", text: body.muscle_group ?? "" },
+    { key: "equipment", text: body.equipment ?? "" },
+  ])
+
   const adminClient = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
   const updates: Record<string, unknown> = {
     name,
-    name_he: body.name_he ?? name ?? "",
     muscle_group: body.muscle_group ?? null,
     category: body.category ?? null,
     equipment: body.equipment ?? null,
@@ -84,6 +90,14 @@ export async function PATCH(request: Request) {
     exercisedb_id: body.exercisedb_id ?? null,
     exercisedb_image_url: body.exercisedb_image_url ?? null,
     exercisedb_gif_url: body.exercisedb_gif_url ?? null,
+    translations: {
+      he: {
+        name: he.name || name,
+        description: he.description || (body.description ?? ""),
+        muscle_group: he.muscle_group || (body.muscle_group ?? ""),
+        equipment: he.equipment || (body.equipment ?? ""),
+      },
+    },
   }
 
   const { error } = await adminClient

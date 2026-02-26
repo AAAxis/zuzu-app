@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { supabaseUrl, supabaseAnonKey } from "@/lib/supabase"
+import { translateManyToHebrew } from "@/lib/translate"
 
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -36,7 +37,6 @@ export async function POST(request: Request) {
 
   let body: {
     name?: string
-    name_he?: string | null
     muscle_group?: string | null
     category?: string | null
     equipment?: string | null
@@ -64,13 +64,19 @@ export async function POST(request: Request) {
     )
   }
 
+  const he = await translateManyToHebrew([
+    { key: "name", text: name },
+    { key: "description", text: body.description ?? "" },
+    { key: "muscle_group", text: body.muscle_group ?? "" },
+    { key: "equipment", text: body.equipment ?? "" },
+  ])
+
   const adminClient = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
   const { error } = await adminClient.from("exercise_definitions").insert({
     name: name,
-    name_he: body.name_he ?? name ?? "",
     muscle_group: body.muscle_group ?? null,
     category: body.category ?? null,
     equipment: body.equipment ?? null,
@@ -83,6 +89,14 @@ export async function POST(request: Request) {
     exercisedb_secondary_muscles: body.exercisedb_secondary_muscles ?? [],
     exercisedb_variations: body.exercisedb_variations ?? [],
     exercisedb_related_exercises: body.exercisedb_related_exercises ?? [],
+    translations: {
+      he: {
+        name: he.name || name,
+        description: he.description || (body.description ?? ""),
+        muscle_group: he.muscle_group || (body.muscle_group ?? ""),
+        equipment: he.equipment || (body.equipment ?? ""),
+      },
+    },
   })
 
   if (error) {

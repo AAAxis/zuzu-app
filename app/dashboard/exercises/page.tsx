@@ -33,6 +33,7 @@ import {
 } from "@/lib/exercisedb-client"
 import { ExerciseMedia } from "./ExerciseMedia"
 import type { GalleryItem } from "@/lib/types"
+import { getDisplayName, getTranslated, DEFAULT_LOCALE } from "@/lib/locale"
 
 type SearchType = "name" | "bodyPart" | "equipment"
 
@@ -49,6 +50,7 @@ interface SavedExercise {
   video_url: string | null
   exercisedb_gif_url: string | null
   exercisedb_image_url: string | null
+  translations?: { he?: { name?: string; description?: string; muscle_group?: string; equipment?: string } } | null
 }
 
 /* ───────── YouTube/Vimeo thumbnail helper ───────── */
@@ -789,7 +791,7 @@ export default function ExercisesPage() {
       setLibraryLoading(true)
       const { data } = await getSupabase()
         .from("exercise_definitions")
-        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url")
+        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url, translations")
         .order("name")
       setMyLibrary((data as SavedExercise[]) ?? [])
       setLibraryLoading(false)
@@ -855,19 +857,11 @@ export default function ExercisesPage() {
       if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
       setSavedId(idStr)
       setTimeout(() => setSavedId(null), 2000)
-      setMyLibrary((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          name: row.name,
-          muscle_group: row.muscle_group,
-          equipment: row.equipment,
-          description: row.description ?? null,
-          video_url: row.video_url || null,
-          exercisedb_gif_url: row.exercisedb_gif_url || null,
-          exercisedb_image_url: row.exercisedb_image_url || null,
-        },
-      ])
+      const { data: refreshed } = await getSupabase()
+        .from("exercise_definitions")
+        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url, translations")
+        .order("name")
+      if (refreshed?.length) setMyLibrary(refreshed as SavedExercise[])
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save"
       setSaveError(msg)
@@ -994,10 +988,10 @@ export default function ExercisesPage() {
                   </div>
                   <div className="p-3 flex-1 min-w-0">
                     <p className="font-semibold text-[#1a1a2e] line-clamp-2 text-sm">
-                      {ex.name}
+                      {getDisplayName(ex, DEFAULT_LOCALE)}
                     </p>
                     <p className="text-xs text-[#6B7280] mt-0.5 truncate">
-                      {[ex.muscle_group, ex.equipment].filter(Boolean).join(" · ") || "—"}
+                      {[getTranslated(ex, "muscle_group", DEFAULT_LOCALE), getTranslated(ex, "equipment", DEFAULT_LOCALE)].filter(Boolean).join(" · ") || "—"}
                     </p>
                   </div>
                 </button>
