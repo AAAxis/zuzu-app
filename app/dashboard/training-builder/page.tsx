@@ -52,6 +52,7 @@ interface WorkoutTemplateRow {
   part_1_exercises: WorkoutExercise[]
   part_2_exercises: WorkoutExercise[]
   part_3_exercises: WorkoutExercise[]
+  updated_at?: string
 }
 
 const PART_LABELS: Record<string, string> = {
@@ -166,11 +167,30 @@ export default function TrainingBuilderPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
       if (editingTemplate) {
-        setTemplates((prev) => prev.map((t) => (t.id === editingTemplate.id ? { ...t, ...payload } : t)))
+        setTemplates((prev) =>
+          prev.map((t) =>
+            t.id === editingTemplate.id
+              ? { ...t, ...payload, id: t.id }
+              : t
+          )
+        )
         alert("Template updated.")
       } else {
         const id = (data as { id?: string }).id
-        if (id) setTemplates((prev) => [...prev, { ...payload, id } as WorkoutTemplateRow])
+        if (id) {
+          const newRow: WorkoutTemplateRow = {
+            id,
+            created_by: payload.created_by,
+            template_name: payload.template_name,
+            workout_title: payload.workout_title,
+            workout_description: payload.workout_description,
+            part_1_exercises: payload.part_1_exercises,
+            part_2_exercises: payload.part_2_exercises,
+            part_3_exercises: payload.part_3_exercises,
+            updated_at: payload.updated_at,
+          }
+          setTemplates((prev) => [...prev, newRow])
+        }
         alert("Template saved.")
       }
       setEditingTemplate(null)
