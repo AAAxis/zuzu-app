@@ -181,8 +181,8 @@ export default function AuthCallback() {
               <CheckCircle className="w-16 h-16 text-[var(--accent)] mx-auto mb-6" />
               <h1 className="text-2xl font-bold mb-3">All Set! 🎉</h1>
               <p className="text-[var(--muted)] mb-8">{message}</p>
-              <Link href="/" className="inline-block bg-[var(--primary)] text-white px-8 py-3.5 rounded-full font-semibold hover:opacity-90 transition-all">
-                Open ZUZU
+              <Link href="/login" className="inline-block bg-[var(--primary)] text-white px-8 py-3.5 rounded-full font-semibold hover:opacity-90 transition-all">
+                Go to Login
               </Link>
             </>
           )}
@@ -192,8 +192,8 @@ export default function AuthCallback() {
               <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
               <h1 className="text-2xl font-bold mb-3">Oops!</h1>
               <p className="text-[var(--muted)] mb-8">{message}</p>
-              <Link href="/" className="inline-block bg-[var(--primary)] text-white px-8 py-3.5 rounded-full font-semibold hover:opacity-90 transition-all">
-                Back to ZUZU
+              <Link href="/login" className="inline-block bg-[var(--primary)] text-white px-8 py-3.5 rounded-full font-semibold hover:opacity-90 transition-all">
+                Back to Login
               </Link>
             </>
           )}

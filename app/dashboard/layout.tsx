@@ -1,13 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
+import { getSupabase } from "@/lib/supabase"
 import {
   LayoutDashboard,
   Users,
   Image,
-  ArrowLeft,
+  LogOut,
   Dumbbell,
   Menu,
   X,
@@ -25,7 +26,13 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  async function handleLogout() {
+    await getSupabase().auth.signOut()
+    router.push("/login")
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F5F3FF]">
@@ -83,13 +90,13 @@ export default function DashboardLayout({
         </nav>
 
         <div className="p-3 border-t border-white/10">
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/50 hover:text-white hover:bg-white/5 transition-all"
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/50 hover:text-red-400 hover:bg-white/5 transition-all w-full"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Site</span>
-          </Link>
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium">Sign Out</span>
+          </button>
         </div>
       </aside>
 
