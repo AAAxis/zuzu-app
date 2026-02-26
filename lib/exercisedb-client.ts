@@ -1,0 +1,308 @@
+/**
+ * ExerciseDB API Client (English only)
+ * Integration with ExerciseDB API — RapidAPI primary, v2.exercisedb.dev fallback.
+ */
+
+const RAPIDAPI_BASE_URL = "https://exercisedb.p.rapidapi.com"
+const RAPIDAPI_HOST = "exercisedb.p.rapidapi.com"
+const FALLBACK_BASE_URL = "https://v2.exercisedb.dev"
+
+function getApiKey(): string | undefined {
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_EXERCISEDB_RAPIDAPI_KEY) {
+    return process.env.NEXT_PUBLIC_EXERCISEDB_RAPIDAPI_KEY
+  }
+  return undefined
+}
+
+async function makeRapidAPIRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const apiKey = getApiKey()
+  if (!apiKey) throw new Error("RapidAPI key not configured (NEXT_PUBLIC_EXERCISEDB_RAPIDAPI_KEY)")
+
+  const url = `${RAPIDAPI_BASE_URL}${endpoint}`
+  const headers: HeadersInit = {
+    "x-rapidapi-host": RAPIDAPI_HOST,
+    "x-rapidapi-key": apiKey,
+    ...(options.headers as Record<string, string>),
+  }
+
+  const res = await fetch(url, { ...options, headers })
+  if (!res.ok) throw new Error(`RapidAPI error: ${res.status} ${res.statusText}`)
+  return res.json()
+}
+
+async function makeFallbackRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const url = `${FALLBACK_BASE_URL}${endpoint}`
+  const res = await fetch(url, options)
+  if (!res.ok) throw new Error(`Fallback API error: ${res.status} ${res.statusText}`)
+  return res.json()
+}
+
+async function makeRequest<T>(
+  rapidAPIEndpoint: string,
+  fallbackEndpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  try {
+    return await makeRapidAPIRequest<T>(rapidAPIEndpoint, options)
+  } catch (err) {
+    console.warn("RapidAPI request failed, trying fallback:", (err as Error).message)
+    try {
+      return await makeFallbackRequest<T>(fallbackEndpoint, options)
+    } catch (fallbackErr) {
+      throw new Error(
+        `ExerciseDB API error: Both RapidAPI and fallback failed. ${(fallbackErr as Error).message}`
+      )
+    }
+  }
+}
+
+function normalizeArray<T>(response: unknown): T[] {
+  if (response && typeof response === "object" && "success" in response && "data" in response) {
+    const data = (response as { data: unknown }).data
+    return Array.isArray(data) ? (data as T[]) : []
+  }
+  return Array.isArray(response) ? (response as T[]) : []
+}
+
+export interface ExerciseDBItem {
+  id?: string
+  exerciseId?: string
+  name: string
+  bodyPart?: string
+  bodyParts?: string[]
+  equipment?: string
+  equipments?: string[]
+  target?: string
+  targetMuscles?: string[]
+  secondaryMuscles?: string[]
+  gifUrl?: string
+  gif?: string
+  imageUrl?: string
+  image?: string
+  videoUrl?: string
+  video?: string
+  instructions?: string[]
+  exerciseType?: string
+  type?: string
+  overview?: string
+  description?: string
+  exerciseTips?: string[]
+  variations?: string[]
+  relatedExerciseIds?: string[]
+  related?: string[]
+}
+
+export async function searchExercises(query: string, limit = 20): Promise<ExerciseDBItem[]> {
+  const rapidAPIEndpoint = `/exercises/name/${encodeURIComponent(query)}?limit=${limit}`
+  const fallbackEndpoint = `/exercises?name=${encodeURIComponent(query)}&limit=${limit}`
+  const response = await makeRequest<unknown>(rapidAPIEndpoint, fallbackEndpoint)
+  return normalizeArray<ExerciseDBItem>(response)
+}
+
+export async function getExerciseById(exerciseId: string): Promise<ExerciseDBItem> {
+  const rapidAPIEndpoint = `/exercises/${exerciseId}`
+  const fallbackEndpoint = `/exercises/${exerciseId}`
+  return makeRequest<ExerciseDBItem>(rapidAPIEndpoint, fallbackEndpoint)
+}
+
+export async function getExercisesByBodyPart(bodyPart: string, limit = 20): Promise<ExerciseDBItem[]> {
+  const normalized = bodyPart.toUpperCase()
+  const rapidAPIEndpoint = `/exercises/bodyPart/${encodeURIComponent(normalized)}?limit=${limit}`
+  const fallbackEndpoint = `/exercises/bodyPart/${encodeURIComponent(normalized)}?limit=${limit}`
+  const response = await makeRequest<unknown>(rapidAPIEndpoint, fallbackEndpoint)
+  return normalizeArray<ExerciseDBItem>(response)
+}
+
+export async function getExercisesByEquipment(
+  equipment: string,
+  limit = 20
+): Promise<ExerciseDBItem[]> {
+  const normalized = equipment.toUpperCase()
+  const rapidAPIEndpoint = `/exercises/equipment/${encodeURIComponent(normalized)}?limit=${limit}`
+  const fallbackEndpoint = `/exercises/equipment/${encodeURIComponent(normalized)}?limit=${limit}`
+  const response = await makeRequest<unknown>(rapidAPIEndpoint, fallbackEndpoint)
+  return normalizeArray<ExerciseDBItem>(response)
+}
+
+export async function getExercisesByTarget(target: string, limit = 20): Promise<ExerciseDBItem[]> {
+  const rapidAPIEndpoint = `/exercises/target/${encodeURIComponent(target)}?limit=${limit}`
+  const fallbackEndpoint = `/exercises/target/${encodeURIComponent(target)}?limit=${limit}`
+  const response = await makeRequest<unknown>(rapidAPIEndpoint, fallbackEndpoint)
+  return normalizeArray<ExerciseDBItem>(response)
+}
+
+const BODY_PARTS_ENGLISH = [
+  "CHEST",
+  "BACK",
+  "LEGS",
+  "SHOULDERS",
+  "ARMS",
+  "BICEPS",
+  "TRICEPS",
+  "FOREARMS",
+  "CORE",
+  "ABS",
+  "GLUTES",
+  "CALVES",
+  "QUADRICEPS",
+  "HAMSTRINGS",
+  "LATS",
+  "TRAPS",
+  "CARDIO",
+  "FULL BODY",
+  "NECK",
+  "ADDUCTORS",
+  "ABDUCTORS",
+]
+
+const EQUIPMENT_ENGLISH = [
+  "BODYWEIGHT",
+  "DUMBBELL",
+  "BARBELL",
+  "KETTLEBELL",
+  "MACHINE",
+  "CABLE",
+  "RESISTANCE BAND",
+  "MEDICINE BALL",
+  "TRX",
+  "BOX",
+  "PULL-UP BAR",
+  "ROWER",
+  "BIKE",
+  "TREADMILL",
+  "SLED",
+  "RINGS",
+  "E-Z BAR",
+  "SMITH MACHINE",
+  "LEVERAGE MACHINE",
+  "OLYMPIC BARBELL",
+  "BAND",
+  "ASSISTED",
+  "BOSU BALL",
+  "STABILITY BALL",
+]
+
+export async function getBodyPartsEnglish(): Promise<string[]> {
+  return [...BODY_PARTS_ENGLISH]
+}
+
+export async function getEquipmentListEnglish(): Promise<string[]> {
+  return [...EQUIPMENT_ENGLISH]
+}
+
+/** Resolve media URL for display (GIF or image) */
+export function getExerciseMediaUrl(exercise: ExerciseDBItem): string | null {
+  if (exercise.gifUrl) {
+    return exercise.gifUrl.startsWith("http")
+      ? exercise.gifUrl
+      : `https://v2.exercisedb.dev/gifs/${exercise.gifUrl}`
+  }
+  if (exercise.gif) {
+    return exercise.gif.startsWith("http") ? exercise.gif : `https://v2.exercisedb.dev/gifs/${exercise.gif}`
+  }
+  if (exercise.imageUrl) {
+    return exercise.imageUrl.startsWith("http")
+      ? exercise.imageUrl
+      : `https://cdn.exercisedb.dev/images/${exercise.imageUrl}`
+  }
+  if (exercise.image) {
+    return exercise.image.startsWith("http")
+      ? exercise.image
+      : `https://cdn.exercisedb.dev/images/${exercise.image}`
+  }
+  return null
+}
+
+/** Resolve video URL */
+export function getExerciseVideoUrl(exercise: ExerciseDBItem): string | null {
+  if (exercise.videoUrl) {
+    return exercise.videoUrl.startsWith("http")
+      ? exercise.videoUrl
+      : `https://cdn.exercisedb.dev/videos/${exercise.videoUrl}`
+  }
+  if (exercise.video) {
+    return exercise.video.startsWith("http")
+      ? exercise.video
+      : `https://cdn.exercisedb.dev/videos/${exercise.video}`
+  }
+  return null
+}
+
+/** Map ExerciseDB item to shape suitable for Supabase exercise_definitions (English only) */
+export function mapToExerciseDefinition(exercise: ExerciseDBItem) {
+  const id = exercise.exerciseId ?? exercise.id ?? ""
+  const idStr = id !== "" && id != null ? String(id) : ""
+
+  let imageUrl = ""
+  if (exercise.imageUrl) {
+    imageUrl = exercise.imageUrl.startsWith("http")
+      ? exercise.imageUrl
+      : `https://cdn.exercisedb.dev/images/${exercise.imageUrl}`
+  } else if (exercise.image) {
+    imageUrl = exercise.image.startsWith("http")
+      ? exercise.image
+      : `https://v2.exercisedb.dev/images/${exercise.image}`
+  }
+
+  let gifUrl = getExerciseMediaUrl(exercise) || ""
+  let videoUrl = getExerciseVideoUrl(exercise) || ""
+
+  const primaryBodyPart = (
+    exercise.bodyParts?.[0] ?? exercise.bodyPart ?? ""
+  ).toUpperCase()
+  const primaryEquipment = (
+    exercise.equipments?.[0] ?? exercise.equipment ?? "BODYWEIGHT"
+  ).toUpperCase()
+
+  const categoryMap: Record<string, string> = {
+    STRENGTH: "Strength",
+    CARDIO: "Cardio",
+    STRETCHING: "Mobility",
+    POWERLIFTING: "Strength",
+    OLYMPIC_WEIGHTLIFTING: "Olympic Weightlifting",
+    STRONGMAN: "Strength",
+    PLYOMETRICS: "Functional",
+  }
+  const exerciseType = (exercise.exerciseType ?? exercise.type ?? "STRENGTH").toUpperCase()
+  const category = categoryMap[exerciseType] ?? "Strength"
+
+  const descriptionParts: string[] = []
+  if (exercise.overview) descriptionParts.push(exercise.overview)
+  if (exercise.description) descriptionParts.push(exercise.description)
+  if (
+    Array.isArray(exercise.instructions) &&
+    exercise.instructions.length > 0
+  ) {
+    descriptionParts.push(
+      "\n\nInstructions:\n" +
+        exercise.instructions.map((inst, i) => `${i + 1}. ${inst}`).join("\n")
+    )
+  }
+  if (
+    Array.isArray(exercise.exerciseTips) &&
+    exercise.exerciseTips.length > 0
+  ) {
+    descriptionParts.push(
+      "\n\nTips:\n" + exercise.exerciseTips.map((t) => `• ${t}`).join("\n")
+    )
+  }
+
+  const targetMuscles = exercise.targetMuscles ?? exercise.target ?? []
+  const secondaryMuscles = exercise.secondaryMuscles ?? exercise.secondary ?? []
+
+  return {
+    name: exercise.name || "Unknown",
+    muscle_group: primaryBodyPart || "FULL BODY",
+    category,
+    equipment: primaryEquipment,
+    description: descriptionParts.join("") || exercise.name || "",
+    video_url: videoUrl,
+    exercisedb_id: idStr || id,
+    exercisedb_image_url: imageUrl,
+    exercisedb_gif_url: gifUrl,
+    exercisedb_target_muscles: Array.isArray(targetMuscles) ? targetMuscles : [],
+    exercisedb_secondary_muscles: Array.isArray(secondaryMuscles) ? secondaryMuscles : [],
+    exercisedb_variations: exercise.variations ?? [],
+    exercisedb_related_exercises: exercise.relatedExerciseIds ?? exercise.related ?? [],
+  }
+}
