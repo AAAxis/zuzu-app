@@ -53,6 +53,7 @@ export default function ExercisesPage() {
   const [savedId, setSavedId] = useState<string | null>(null)
   const [myLibrary, setMyLibrary] = useState<SavedExercise[]>([])
   const [libraryLoading, setLibraryLoading] = useState(true)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([getBodyPartsEnglish(), getEquipmentListEnglish()]).then(
@@ -108,24 +109,30 @@ export default function ExercisesPage() {
     const id = exercise.exerciseId ?? exercise.id ?? ""
     const idStr = String(id)
     setSavingId(idStr)
+    setSaveError(null)
     try {
       const row = mapToExerciseDefinition(exercise)
-      const { error } = await getSupabase().from("exercise_definitions").insert({
-        name: row.name,
-        muscle_group: row.muscle_group,
-        category: row.category,
-        equipment: row.equipment,
-        description: row.description,
-        video_url: row.video_url || null,
-        exercisedb_id: row.exercisedb_id || null,
-        exercisedb_image_url: row.exercisedb_image_url || null,
-        exercisedb_gif_url: row.exercisedb_gif_url || null,
-        exercisedb_target_muscles: row.exercisedb_target_muscles ?? [],
-        exercisedb_secondary_muscles: row.exercisedb_secondary_muscles ?? [],
-        exercisedb_variations: row.exercisedb_variations ?? [],
-        exercisedb_related_exercises: row.exercisedb_related_exercises ?? [],
+      const res = await fetch("/api/exercises/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: row.name,
+          muscle_group: row.muscle_group,
+          category: row.category,
+          equipment: row.equipment,
+          description: row.description,
+          video_url: row.video_url || null,
+          exercisedb_id: row.exercisedb_id || null,
+          exercisedb_image_url: row.exercisedb_image_url || null,
+          exercisedb_gif_url: row.exercisedb_gif_url || null,
+          exercisedb_target_muscles: row.exercisedb_target_muscles ?? [],
+          exercisedb_secondary_muscles: row.exercisedb_secondary_muscles ?? [],
+          exercisedb_variations: row.exercisedb_variations ?? [],
+          exercisedb_related_exercises: row.exercisedb_related_exercises ?? [],
+        }),
       })
-      if (error) throw new Error(error.message ?? "Failed to save exercise")
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
       setSavedId(idStr)
       setTimeout(() => setSavedId(null), 2000)
       setMyLibrary((prev) => [
@@ -140,6 +147,8 @@ export default function ExercisesPage() {
         },
       ])
     } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save"
+      setSaveError(msg)
       console.error(err)
     } finally {
       setSavingId(null)
@@ -251,6 +260,20 @@ export default function ExercisesPage() {
           )}
         </button>
       </div>
+
+      {saveError && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between gap-2">
+          <span>{saveError}</span>
+          <button
+            type="button"
+            onClick={() => setSaveError(null)}
+            className="text-red-600 hover:text-red-800 shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Results — Vitrix-style card grid: large GIF on top, name below */}
       {results.length > 0 && (
