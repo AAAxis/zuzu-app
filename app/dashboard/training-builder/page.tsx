@@ -6,10 +6,8 @@ import {
   Trash2,
   Search,
   Save,
-  Play,
   FolderOpen,
   Loader2,
-  ChevronDown,
   Edit,
   FilePlus,
   Video,
@@ -148,8 +146,8 @@ export default function TrainingBuilderPage() {
       return
     }
     setIsSaving(true)
-    const supabase = getSupabase()
     const payload = {
+      id: editingTemplate?.id,
       created_by: user.email,
       template_name: templateName.trim(),
       workout_title: workoutTitle || "Custom workout",
@@ -160,20 +158,26 @@ export default function TrainingBuilderPage() {
       updated_at: new Date().toISOString(),
     }
     try {
+      const res = await fetch("/api/workout-templates/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
       if (editingTemplate) {
-        await supabase.from("workout_templates").update(payload).eq("id", editingTemplate.id)
         setTemplates((prev) => prev.map((t) => (t.id === editingTemplate.id ? { ...t, ...payload } : t)))
         alert("Template updated.")
       } else {
-        const { data } = await supabase.from("workout_templates").insert(payload).select("id").single()
-        if (data) setTemplates((prev) => [...prev, { ...payload, id: data.id } as WorkoutTemplateRow])
+        const id = (data as { id?: string }).id
+        if (id) setTemplates((prev) => [...prev, { ...payload, id } as WorkoutTemplateRow])
         alert("Template saved.")
       }
       setEditingTemplate(null)
       setTemplateName("")
     } catch (e) {
       console.error(e)
-      alert("Failed to save template.")
+      alert(e instanceof Error ? e.message : "Failed to save template.")
     } finally {
       setIsSaving(false)
     }
@@ -508,7 +512,7 @@ export default function TrainingBuilderPage() {
           )}
 
           <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
-            <h2 className="text-lg font-bold text-[#1a1a2e] mb-4">{editingTemplate ? "Update or start" : "Save and start"}</h2>
+            <h2 className="text-lg font-bold text-[#1a1a2e] mb-4">Save template</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#6B7280] mb-1">Template name</label>
@@ -531,15 +535,6 @@ export default function TrainingBuilderPage() {
                   </button>
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={workoutExercises.length === 0}
-                className="w-full flex items-center justify-center gap-2 bg-[#10B981] text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                <Play className="w-4 h-4" />
-                Start workout
-              </button>
-              <p className="text-xs text-[#6B7280]">Start workout will open the session in the app (coming soon).</p>
             </div>
           </div>
         </div>
