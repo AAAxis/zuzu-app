@@ -14,6 +14,7 @@ import {
   Info,
   ClipboardList,
   X,
+  Sparkles,
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
@@ -76,6 +77,10 @@ export default function TrainingBuilderPage() {
   const [selectedExerciseInfo, setSelectedExerciseInfo] = useState<ExerciseDef | null>(null)
   const [templateToDelete, setTemplateToDelete] = useState<WorkoutTemplateRow | null>(null)
   const [videoModal, setVideoModal] = useState({ open: false, url: "", title: "" })
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -252,6 +257,77 @@ export default function TrainingBuilderPage() {
     setEditingTemplate(null)
   }
 
+  const generateWithAi = async () => {
+    const prompt = aiPrompt.trim()
+    if (!prompt) {
+      setAiError("Describe your workout first.")
+      return
+    }
+    if (exerciseDefinitions.length === 0) {
+      setAiError("Add at least one exercise to your library (Exercises tab) first.")
+      return
+    }
+    setAiError(null)
+    setAiLoading(true)
+    try {
+      const res = await fetch("/api/training-builder/ai-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          exercises: exerciseDefinitions.map((e) => ({ id: e.id, name: e.name })),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || res.statusText)
+      }
+      const result = data as {
+        template_name: string
+        workout_title: string
+        workout_description: string
+        exercises: Array<{
+          exerciseId: string
+          part: "part_1_exercises" | "part_2_exercises" | "part_3_exercises"
+          suggested_sets: number
+          suggested_reps: number
+          suggested_weight: number
+          suggested_duration: number
+          notes: string
+        }>
+      }
+      setTemplateName(result.template_name)
+      setWorkoutTitle(result.workout_title)
+      setWorkoutDescription(result.workout_description)
+      const defsById = new Map(exerciseDefinitions.map((e) => [e.id, e]))
+      const newExercises: WorkoutExercise[] = result.exercises.map((item, i) => {
+        const def = defsById.get(item.exerciseId)
+        if (!def) return null
+        return {
+          key: `${def.id}-ai-${Date.now()}-${i}`,
+          definitionId: def.id,
+          name: def.name,
+          category: def.muscle_group,
+          video_url: def.video_url,
+          part: item.part,
+          suggested_sets: item.suggested_sets,
+          suggested_reps: item.suggested_reps,
+          suggested_weight: item.suggested_weight,
+          suggested_duration: item.suggested_duration,
+          notes: item.notes,
+        }
+      })
+      setWorkoutExercises(newExercises.filter((e): e is WorkoutExercise => e !== null))
+      setEditingTemplate(null)
+      setAiModalOpen(false)
+      setAiPrompt("")
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Failed to generate workout.")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   const byPart = {
     part_1_exercises: workoutExercises.filter((e) => e.part === "part_1_exercises"),
     part_2_exercises: workoutExercises.filter((e) => e.part === "part_2_exercises"),
@@ -297,6 +373,14 @@ export default function TrainingBuilderPage() {
               rows={2}
               className="w-full rounded-xl border border-[#E8E5F0] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none"
             />
+            <button
+              type="button"
+              onClick={() => { setAiError(null); setAiPrompt(""); setAiModalOpen(true) }}
+              className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#7C3AED] text-[#7C3AED] font-medium hover:bg-[#F8F7FF] transition-colors"
+            >
+              <Sparkles className="w-5 h-5" />
+              Create with AI
+            </button>
           </div>
 
           <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
@@ -610,6 +694,48 @@ export default function TrainingBuilderPage() {
             </div>
             <div className="aspect-video bg-black">
               <video src={videoModal.url} controls className="w-full h-full" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create with AI modal */}
+      {aiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !aiLoading && setAiModalOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-[#1a1a2e] mb-1 flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-[#7C3AED]" />
+              Create with AI
+            </h3>
+            <p className="text-sm text-[#6B7280] mb-4">
+              Describe the workout you want (e.g. &quot;30 min leg day with squats and lunges&quot;, &quot;Upper body push: bench, shoulder press, triceps&quot;). AI will pick exercises from your library and fill sets, reps, and parts.
+            </p>
+            <textarea
+              placeholder="E.g. Leg day: squats 3x10, lunges 3x12 each leg, calf raises 3x15. Focus on form."
+              value={aiPrompt}
+              onChange={(e) => { setAiPrompt(e.target.value); setAiError(null) }}
+              rows={4}
+              className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none mb-3"
+              disabled={aiLoading}
+            />
+            {aiError && <p className="text-sm text-red-600 mb-3">{aiError}</p>}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => !aiLoading && setAiModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#E8E5F0] font-medium hover:bg-[#F8F7FF]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={generateWithAi}
+                disabled={aiLoading || !aiPrompt.trim()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#7C3AED] text-white font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {aiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {aiLoading ? "Generating…" : "Generate"}
+              </button>
             </div>
           </div>
         </div>
