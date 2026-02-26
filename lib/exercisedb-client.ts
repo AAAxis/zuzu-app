@@ -276,6 +276,12 @@ export function getExerciseMediaUrl(exercise: ExerciseDBItem): string | null {
   if (exercise.gif) {
     return exercise.gif.startsWith("http") ? exercise.gif : `https://v2.exercisedb.dev/gifs/${exercise.gif}`
   }
+  // Prefer GIF via proxy when we have id (animated like Vitrix); fall back to static image if no id
+  const id = exercise.exerciseId ?? exercise.id
+  if (id) {
+    const idStr = String(id)
+    return `/api/exercisedb/image?id=${encodeURIComponent(idStr)}&resolution=360`
+  }
   if (exercise.imageUrl) {
     return exercise.imageUrl.startsWith("http")
       ? exercise.imageUrl
@@ -285,12 +291,6 @@ export function getExerciseMediaUrl(exercise: ExerciseDBItem): string | null {
     return exercise.image.startsWith("http")
       ? exercise.image
       : `https://cdn.exercisedb.dev/images/${exercise.image}`
-  }
-  // Fallback: some list APIs omit media; try by exercise id (v2 and cdn patterns)
-  const id = exercise.exerciseId ?? exercise.id
-  if (id) {
-    const idStr = String(id)
-    return `https://v2.exercisedb.dev/gifs/${idStr}`
   }
   return null
 }
