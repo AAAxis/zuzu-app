@@ -388,7 +388,7 @@ function ExerciseDetailEditModal({
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete "${exercise.name}" from your library?`)) return
+    if (!confirm(`Delete "${getDisplayName(exercise, DEFAULT_LOCALE)}" from your library?`)) return
     setDeleting(true)
     setError("")
     try {
@@ -981,7 +981,7 @@ export default function ExercisesPage() {
                   <div className="aspect-square w-full min-h-[120px] bg-[#E8E5F0] overflow-hidden">
                     <ExerciseMedia
                       src={mediaUrl}
-                      alt={ex.name}
+                      alt={getDisplayName(ex, DEFAULT_LOCALE)}
                       boxClassName="w-full aspect-square min-h-[120px]"
                       objectFit="cover"
                     />
