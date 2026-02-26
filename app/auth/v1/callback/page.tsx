@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { getSupabase } from "@/lib/supabase"
 import { Dumbbell, CheckCircle, XCircle, Loader2, Lock } from "lucide-react"
 import Link from "next/link"
@@ -11,8 +11,13 @@ export default function AuthCallback() {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [updating, setUpdating] = useState(false)
+  const [isInvite, setIsInvite] = useState(false)
+  const hasRun = useRef(false)
 
   useEffect(() => {
+    if (hasRun.current) return
+    hasRun.current = true
+
     async function handleCallback() {
       try {
         // Supabase redirects with tokens in the hash fragment
@@ -34,6 +39,12 @@ export default function AuthCallback() {
             return
           }
 
+          if (type === "invite") {
+            setIsInvite(true)
+            setStatus("reset-password")
+            return
+          }
+
           if (type === "recovery") {
             setStatus("reset-password")
             return
@@ -51,13 +62,18 @@ export default function AuthCallback() {
         }
 
         // If no hash tokens, try to exchange via URL (Supabase might handle it)
-        // Wait for Supabase to process the redirect
         const { data, error } = await getSupabase().auth.getSession()
-        
+
         if (data?.session) {
           const url = new URL(window.location.href)
           const urlType = url.searchParams.get("type")
-          
+
+          if (urlType === "invite") {
+            setIsInvite(true)
+            setStatus("reset-password")
+            return
+          }
+
           if (urlType === "recovery") {
             setStatus("reset-password")
             return
@@ -68,10 +84,9 @@ export default function AuthCallback() {
           return
         }
 
-        // No session yet — the verify endpoint redirects here with tokens in hash
-        // Give Supabase a moment to process
+        // No session yet — give Supabase a moment to process
         await new Promise(r => setTimeout(r, 2000))
-        
+
         const { data: retryData } = await getSupabase().auth.getSession()
         if (retryData?.session) {
           setStatus("success")
@@ -112,7 +127,11 @@ export default function AuthCallback() {
     }
 
     setStatus("success")
-    setMessage("Password updated successfully! You can now log in with your new password.")
+    setMessage(
+      isInvite
+        ? "Your account is ready! You can now log in."
+        : "Password updated successfully! You can now log in with your new password."
+    )
   }
 
   return (
@@ -139,14 +158,20 @@ export default function AuthCallback() {
           {status === "reset-password" && (
             <>
               <Lock className="w-16 h-16 text-[var(--primary)] mx-auto mb-6" />
-              <h1 className="text-2xl font-bold mb-3">Set New Password</h1>
-              <p className="text-[var(--muted)] mb-6">Enter your new password below.</p>
-              
+              <h1 className="text-2xl font-bold mb-3">
+                {isInvite ? "Welcome to ZUZU!" : "Set New Password"}
+              </h1>
+              <p className="text-[var(--muted)] mb-6">
+                {isInvite
+                  ? "Set a password to complete your account setup."
+                  : "Enter your new password below."}
+              </p>
+
               {message && <p className="text-red-500 text-sm mb-4">{message}</p>}
-              
+
               <div className="space-y-4 text-left">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">New Password</label>
+                  <label className="block text-sm font-medium mb-1.5">Password</label>
                   <input
                     type="password"
                     value={newPassword}
@@ -170,7 +195,7 @@ export default function AuthCallback() {
                   disabled={updating}
                   className="w-full bg-[var(--primary)] text-white py-3.5 rounded-full font-semibold hover:opacity-90 transition-all disabled:opacity-50"
                 >
-                  {updating ? "Updating..." : "Update Password"}
+                  {updating ? "Setting up..." : isInvite ? "Create Account" : "Update Password"}
                 </button>
               </div>
             </>
@@ -179,7 +204,7 @@ export default function AuthCallback() {
           {status === "success" && (
             <>
               <CheckCircle className="w-16 h-16 text-[var(--accent)] mx-auto mb-6" />
-              <h1 className="text-2xl font-bold mb-3">All Set! 🎉</h1>
+              <h1 className="text-2xl font-bold mb-3">All Set!</h1>
               <p className="text-[var(--muted)] mb-8">{message}</p>
               <Link href="/login" className="inline-block bg-[var(--primary)] text-white px-8 py-3.5 rounded-full font-semibold hover:opacity-90 transition-all">
                 Go to Login
