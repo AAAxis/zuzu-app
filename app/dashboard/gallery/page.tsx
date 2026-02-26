@@ -630,7 +630,13 @@ function UploadModal({
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : typeof err === "string" ? err : "Upload failed. Please try again."
-      setError(msg)
+      const isBucketNotFound =
+        /bucket not found|Bucket not found|does not exist/i.test(msg)
+      setError(
+        isBucketNotFound
+          ? "Storage bucket not set up. Ask an admin to run the storage setup (see README or /api/setup-storage) or create bucket \"training-media\" in Supabase Dashboard → Storage."
+          : msg
+      )
       setUploading(false)
     }
   }
