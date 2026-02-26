@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "set-first-admin": "node scripts/set-first-admin.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
