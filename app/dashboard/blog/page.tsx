@@ -324,9 +324,6 @@ function BlogEditorModal({
   const [enExcerpt, setEnExcerpt] = useState("")
   const [enContent, setEnContent] = useState("")
 
-  // Primary language = which one is used for slug/main fields (title, excerpt, content in DB)
-  const [primaryLanguage, setPrimaryLanguage] = useState<"he" | "en">(post?.original_language || "he")
-
   // Shared meta
   const [featuredImage, setFeaturedImage] = useState("")
   const [featuredImageSource, setFeaturedImageSource] = useState("")
@@ -352,7 +349,6 @@ function BlogEditorModal({
       setReadTime(post.read_time || 5)
       setTagsStr((post.tags || []).join(", "))
       setStatus(post.status || "draft")
-      setPrimaryLanguage(post.original_language || "he")
       // Main fields + translations: main is in title/excerpt/content, other in translations
       if (post.original_language === "he") {
         setHeTitle(post.title || "")
@@ -373,15 +369,14 @@ function BlogEditorModal({
   }, [post])
 
   async function handleSave() {
-    // At least one language must have a title; primary is used for slug/main fields
+    // At least one language must have a title; prefer Hebrew when both filled
     const hasHe = !!(heTitle?.trim())
     const hasEn = !!(enTitle?.trim())
     if (!hasHe && !hasEn) {
       setError("Fill at least one language (Hebrew or English) with a title.")
       return
     }
-    // Resolve primary: if only one language filled, use it; else use primaryLanguage
-    const primary = hasHe && hasEn ? primaryLanguage : hasHe ? "he" : "en"
+    const primary = hasHe ? "he" : "en"
     const title = primary === "he" ? heTitle.trim() : enTitle.trim()
     const excerpt = primary === "he" ? heExcerpt.trim() : enExcerpt.trim()
     const content = primary === "he" ? heContent.trim() : enContent.trim()
@@ -470,7 +465,6 @@ function BlogEditorModal({
     setReadTime(data.read_time || 5)
     if (data.featured_image) setFeaturedImage(data.featured_image)
     if (data.featured_image_source) setFeaturedImageSource(data.featured_image_source)
-    setPrimaryLanguage(genLang)
 
     // Auto-translate to the other language (optional fill)
     const targetLang = genLang === "en" ? "he" : "en"
@@ -572,21 +566,6 @@ function BlogEditorModal({
               <span className="w-2 h-2 rounded-full bg-green-400" />
             )}
           </button>
-        </div>
-
-        {/* Primary language (used for slug / main post fields when both are filled) */}
-        <div className="px-6 py-3 border-b border-[#E8E5F0] bg-[#FAFAFA]">
-          <label className="text-sm font-medium text-[#6B7280]">
-            Primary language (for URL/slug when both are filled):{" "}
-            <select
-              value={primaryLanguage}
-              onChange={(e) => setPrimaryLanguage(e.target.value as "he" | "en")}
-              className="ml-2 px-3 py-1.5 rounded-lg border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
-            >
-              <option value="he">Hebrew</option>
-              <option value="en">English</option>
-            </select>
-          </label>
         </div>
 
         {/* Error */}
