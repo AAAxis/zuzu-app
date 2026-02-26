@@ -81,11 +81,43 @@ async function makeRequest<T>(
 }
 
 function normalizeArray<T>(response: unknown): T[] {
+  let arr: unknown[] = []
   if (response && typeof response === "object" && "success" in response && "data" in response) {
     const data = (response as { data: unknown }).data
-    return Array.isArray(data) ? (data as T[]) : []
+    arr = Array.isArray(data) ? data : []
+  } else if (Array.isArray(response)) {
+    arr = response
   }
-  return Array.isArray(response) ? (response as T[]) : []
+  return arr.map((item) => normalizeExerciseItem(item) as T)
+}
+
+/** Map API response item to ExerciseDBItem; supports snake_case (gif_url, image_url, body_part, etc.) */
+function normalizeExerciseItem(raw: unknown): ExerciseDBItem {
+  if (!raw || typeof raw !== "object") {
+    return { name: "Unknown" }
+  }
+  const o = raw as Record<string, unknown>
+  const name = (o.name ?? o.exerciseName ?? "Unknown") as string
+  const id = o.id ?? o.exerciseId ?? o.exercise_id
+  const gifUrl = o.gifUrl ?? o.gif_url ?? o.gif
+  const imageUrl = o.imageUrl ?? o.image_url ?? o.image
+  const bodyPart = o.bodyPart ?? o.body_part
+  const bodyParts = o.bodyParts ?? o.body_parts
+  const equipment = o.equipment
+  const equipments = o.equipments ?? o.equipment_list
+  return {
+    ...(o as ExerciseDBItem),
+    name: String(name),
+    id: id != null ? String(id) : undefined,
+    exerciseId: id != null ? String(id) : undefined,
+    gifUrl: gifUrl != null ? String(gifUrl) : undefined,
+    gif: gifUrl != null ? String(gifUrl) : (o.gif as string | undefined),
+    imageUrl: imageUrl != null ? String(imageUrl) : undefined,
+    image: imageUrl != null ? String(imageUrl) : (o.image as string | undefined),
+    bodyPart: bodyPart != null ? String(bodyPart) : undefined,
+    bodyParts: Array.isArray(bodyParts) ? bodyParts.map(String) : undefined,
+    equipments: Array.isArray(equipments) ? equipments.map(String) : undefined,
+  }
 }
 
 export interface ExerciseDBItem {

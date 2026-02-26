@@ -252,13 +252,13 @@ export default function ExercisesPage() {
         </button>
       </div>
 
-      {/* Results */}
+      {/* Results — Vitrix-style card grid: large GIF on top, name below */}
       {results.length > 0 && (
         <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
           <p className="text-sm text-[#6B7280] mb-4">
             Found {results.length} exercises
           </p>
-          <div className="space-y-4 max-h-[500px] overflow-y-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto">
             <AnimatePresence>
               {results.map((exercise, index) => {
                 const mediaUrl = getMediaUrl(exercise)
@@ -267,43 +267,35 @@ export default function ExercisesPage() {
                 return (
                   <motion.div
                     key={exerciseId}
-                    initial={{ opacity: 0, y: 16 }}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-4 p-4 rounded-xl bg-[#F8F7FF] border border-[#E8E5F0]"
+                    className="rounded-xl border border-[#E8E5F0] bg-[#F8F7FF] overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
                   >
-                    <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-[#E8E5F0] bg-[#E8E5F0]">
-                      <ExerciseMedia
-                        src={mediaUrl}
-                        alt={name}
-                        boxClassName="w-20 h-20"
-                        objectFit="cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-[#1a1a2e] truncate">
-                        {name}
-                      </p>
-                      {(exercise.bodyParts?.length ?? 0) > 0 && (
-                        <p className="text-sm text-[#6B7280] truncate">
-                          {exercise.bodyParts?.join(", ")}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExercise(exercise)}
+                      className="block w-full text-left flex-1 flex flex-col min-w-0"
+                    >
+                      <div className="aspect-square w-full min-h-[140px] bg-[#E8E5F0] overflow-hidden">
+                        <ExerciseMedia
+                          src={mediaUrl}
+                          alt={name}
+                          boxClassName="w-full aspect-square min-h-[140px]"
+                          objectFit="cover"
+                        />
+                      </div>
+                      <div className="p-3 flex-1 flex flex-col min-w-0">
+                        <p className="font-semibold text-[#1a1a2e] line-clamp-2 text-sm">
+                          {name}
                         </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        {mediaUrl && (
-                          <span className="flex items-center gap-1 text-xs text-[#6B7280]">
-                            <ImageIcon className="w-3 h-3" />
-                            Image
-                          </span>
-                        )}
-                        {getVidUrl(exercise) && (
-                          <span className="flex items-center gap-1 text-xs text-[#6B7280]">
-                            <Video className="w-3 h-3" />
-                            Video
-                          </span>
+                        {(exercise.bodyParts?.length ?? 0) > 0 && (
+                          <p className="text-xs text-[#6B7280] mt-0.5 truncate">
+                            {exercise.bodyParts?.join(", ")}
+                          </p>
                         )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    </button>
+                    <div className="p-2 border-t border-[#E8E5F0] flex items-center justify-end gap-1 bg-white/80">
                       <button
                         type="button"
                         onClick={() => setSelectedExercise(exercise)}
@@ -351,28 +343,28 @@ export default function ExercisesPage() {
             No exercises saved yet. Search above and click Save to add exercises to your library.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
             {myLibrary.map((ex) => {
               const mediaUrl =
                 ex.exercisedb_gif_url || ex.exercisedb_image_url || null
               return (
                 <div
                   key={ex.id}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-[#F8F7FF] border border-[#E8E5F0]"
+                  className="rounded-xl border border-[#E8E5F0] bg-[#F8F7FF] overflow-hidden flex flex-col shadow-sm"
                 >
-                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-[#E8E5F0] flex-shrink-0">
+                  <div className="aspect-square w-full min-h-[120px] bg-[#E8E5F0] overflow-hidden">
                     <ExerciseMedia
                       src={mediaUrl}
                       alt={ex.name}
-                      boxClassName="w-14 h-14"
+                      boxClassName="w-full aspect-square min-h-[120px]"
                       objectFit="cover"
                     />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-[#1a1a2e] truncate">
+                  <div className="p-3 flex-1 min-w-0">
+                    <p className="font-semibold text-[#1a1a2e] line-clamp-2 text-sm">
                       {ex.name}
                     </p>
-                    <p className="text-xs text-[#6B7280] truncate">
+                    <p className="text-xs text-[#6B7280] mt-0.5 truncate">
                       {[ex.muscle_group, ex.equipment].filter(Boolean).join(" · ") || "—"}
                     </p>
                   </div>
