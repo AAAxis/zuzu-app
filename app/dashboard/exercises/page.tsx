@@ -565,3 +565,452 @@ export default function ExercisesPage() {
     </div>
   )
 }
+
+/* ───────── YouTube/Vimeo thumbnail helper ───────── */
+
+function getVideoThumbnail(url: string): string | null {
+  // YouTube
+  const ytMatch = url.match(
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+  ) || url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/)
+  if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`
+  return null
+}
+
+/* ───────── Create Exercise Modal ───────── */
+
+function CreateExerciseModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (ex: SavedExercise) => void
+}) {
+  const [name, setName] = useState("")
+  const [muscleGroup, setMuscleGroup] = useState("")
+  const [category, setCategory] = useState("")
+  const [equipment, setEquipment] = useState("")
+  const [description, setDescription] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false)
+  const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null)
+
+  async function handleSave() {
+    if (!name.trim()) return
+    setSaving(true)
+    setError("")
+
+    try {
+      // Map gallery media to exercise fields
+      let imageUrl: string | null = null
+      let videoUrl: string | null = null
+
+      if (selectedGalleryItem) {
+        if (selectedGalleryItem.media_type === "photo") {
+          imageUrl = selectedGalleryItem.media_url
+        } else {
+          videoUrl = selectedGalleryItem.media_url
+          // For YouTube/Vimeo, use thumbnail as image
+          const thumb = getVideoThumbnail(selectedGalleryItem.media_url)
+          if (thumb) {
+            imageUrl = thumb
+          } else if (selectedGalleryItem.thumbnail_url) {
+            imageUrl = selectedGalleryItem.thumbnail_url
+          }
+        }
+      }
+
+      const res = await fetch("/api/exercises/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          muscle_group: muscleGroup || null,
+          category: category || null,
+          equipment: equipment || null,
+          description: description.trim() || null,
+          video_url: videoUrl,
+          exercisedb_id: null,
+          exercisedb_image_url: imageUrl,
+          exercisedb_gif_url: null,
+          exercisedb_target_muscles: [],
+          exercisedb_secondary_muscles: [],
+          exercisedb_variations: [],
+          exercisedb_related_exercises: [],
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
+
+      onCreated({
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        muscle_group: muscleGroup || null,
+        equipment: equipment || null,
+        video_url: videoUrl,
+        exercisedb_gif_url: null,
+        exercisedb_image_url: imageUrl,
+      })
+    } catch (err: any) {
+      setError(err.message || "Failed to save exercise")
+      setSaving(false)
+    }
+  }
+
+  // Get display thumbnail for selected gallery item
+  function getSelectedThumb(): string | null {
+    if (!selectedGalleryItem) return null
+    if (selectedGalleryItem.media_type === "photo") return selectedGalleryItem.media_url
+    const ytThumb = getVideoThumbnail(selectedGalleryItem.media_url)
+    if (ytThumb) return ytThumb
+    if (selectedGalleryItem.thumbnail_url) return selectedGalleryItem.thumbnail_url
+    return null
+  }
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        onClick={onClose}
+      >
+        <div
+          className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold text-[#1a1a2e] flex items-center gap-2">
+              <Plus className="w-5 h-5 text-[#7C3AED]" />
+              Create My Own Exercise
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 text-[#6B7280]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                Exercise Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Bulgarian Split Squat"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+              />
+            </div>
+
+            {/* Muscle Group + Equipment row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                  Muscle Group
+                </label>
+                <select
+                  value={muscleGroup}
+                  onChange={(e) => setMuscleGroup(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] bg-white"
+                >
+                  <option value="">Select...</option>
+                  {MUSCLE_GROUPS.map((mg) => (
+                    <option key={mg} value={mg}>{mg}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                  Equipment
+                </label>
+                <select
+                  value={equipment}
+                  onChange={(e) => setEquipment(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] bg-white"
+                >
+                  <option value="">Select...</option>
+                  {EQUIPMENT_OPTIONS.map((eq) => (
+                    <option key={eq} value={eq}>{eq}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] bg-white"
+              >
+                <option value="">Select...</option>
+                {EXERCISE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                Description / Instructions{" "}
+                <span className="text-[#6B7280] font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the exercise, form cues, tips..."
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] resize-none"
+              />
+            </div>
+
+            {/* Attach from Gallery */}
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
+                Media from Gallery{" "}
+                <span className="text-[#6B7280] font-normal">(optional)</span>
+              </label>
+              {selectedGalleryItem ? (
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-[#E8E5F0] bg-[#F8F7FF]">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-[#E8E5F0]">
+                    {(() => {
+                      const thumb = getSelectedThumb()
+                      return thumb ? (
+                        <img src={thumb} alt={selectedGalleryItem.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
+                          <Play className="w-5 h-5 text-white ml-0.5" />
+                        </div>
+                      )
+                    })()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#1a1a2e] truncate">{selectedGalleryItem.title}</p>
+                    <p className="text-xs text-[#6B7280]">{selectedGalleryItem.media_type} · {selectedGalleryItem.category}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowGalleryPicker(true)}
+                      className="p-2 rounded-lg text-[#7C3AED] hover:bg-[#F3F0FF] transition-colors"
+                      title="Change"
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedGalleryItem(null)}
+                      className="p-2 rounded-lg text-red-400 hover:bg-red-50 transition-colors"
+                      title="Remove"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowGalleryPicker(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-[#E8E5F0] text-[#6B7280] text-sm font-medium hover:border-[#7C3AED] hover:text-[#7C3AED] hover:bg-[#F8F7FF] transition-all"
+                >
+                  <ImagePlus className="w-5 h-5" />
+                  Attach from Gallery
+                </button>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-medium text-[#6B7280] hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!name.trim() || saving}
+              className="flex-1 py-2.5 rounded-xl bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Create Exercise
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Gallery Picker (nested modal) */}
+      {showGalleryPicker && (
+        <GalleryPickerModal
+          onClose={() => setShowGalleryPicker(false)}
+          onSelect={(item) => {
+            setSelectedGalleryItem(item)
+            setShowGalleryPicker(false)
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+/* ───────── Gallery Picker Modal ───────── */
+
+function GalleryPickerModal({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void
+  onSelect: (item: GalleryItem) => void
+}) {
+  const [items, setItems] = useState<GalleryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await getSupabase()
+        .from("training_gallery")
+        .select("*")
+        .order("created_at", { ascending: false })
+      setItems((data as GalleryItem[]) ?? [])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const filtered = items.filter((item) => {
+    if (!search) return true
+    return (
+      item.title.toLowerCase().includes(search.toLowerCase()) ||
+      item.category.toLowerCase().includes(search.toLowerCase())
+    )
+  })
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-[#1a1a2e] flex items-center gap-2">
+            <ImageIcon className="w-5 h-5 text-[#7C3AED]" />
+            Select from Gallery
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 text-[#6B7280]"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search gallery..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+          />
+        </div>
+
+        {/* Gallery Grid */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-[#7C3AED]" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <ImageIcon className="w-12 h-12 text-[#E8E5F0] mx-auto mb-3" />
+              <p className="text-[#6B7280] text-sm">
+                {items.length === 0
+                  ? "No gallery items yet. Upload media in the Gallery page first."
+                  : "No items match your search."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {filtered.map((item) => {
+                const ytThumb = getVideoThumbnail(item.media_url)
+                const thumb =
+                  item.media_type === "photo"
+                    ? item.media_url
+                    : ytThumb || item.thumbnail_url || null
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onSelect(item)}
+                    className="group rounded-xl border border-[#E8E5F0] overflow-hidden hover:border-[#7C3AED] hover:shadow-md transition-all text-left"
+                  >
+                    <div className="aspect-square bg-[#E8E5F0] relative overflow-hidden">
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#1a1a2e] to-[#7C3AED] flex items-center justify-center">
+                          <Play className="w-6 h-6 text-white ml-0.5" />
+                        </div>
+                      )}
+                      {item.media_type === "video" && (
+                        <div className="absolute bottom-1 left-1">
+                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/80 text-white backdrop-blur-sm">
+                            <Video className="w-2.5 h-2.5" />
+                            video
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-xs font-medium text-[#1a1a2e] truncate">
+                        {item.title}
+                      </p>
+                      <p className="text-[10px] text-[#6B7280] truncate">
+                        {item.category}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
