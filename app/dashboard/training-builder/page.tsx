@@ -68,7 +68,6 @@ export default function TrainingBuilderPage() {
   const [workoutExercises, setWorkoutExercises] = useState<WorkoutExercise[]>([])
   const [workoutTitle, setWorkoutTitle] = useState("Custom workout")
   const [workoutDescription, setWorkoutDescription] = useState("")
-  const [templateName, setTemplateName] = useState("")
   const [templates, setTemplates] = useState<WorkoutTemplateRow[]>([])
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplateRow | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -139,8 +138,9 @@ export default function TrainingBuilderPage() {
   )
 
   const saveTemplate = async () => {
-    if (!templateName.trim()) {
-      alert("Enter a template name.")
+    const name = workoutTitle.trim()
+    if (!name) {
+      alert("Enter a workout title.")
       return
     }
     if (workoutExercises.length === 0) {
@@ -155,8 +155,8 @@ export default function TrainingBuilderPage() {
     const payload = {
       id: editingTemplate?.id,
       created_by: user.email,
-      template_name: templateName.trim(),
-      workout_title: workoutTitle || "Custom workout",
+      template_name: name,
+      workout_title: name,
       workout_description: workoutDescription || "",
       part_1_exercises: workoutExercises.filter((e) => e.part === "part_1_exercises"),
       part_2_exercises: workoutExercises.filter((e) => e.part === "part_2_exercises"),
@@ -199,7 +199,6 @@ export default function TrainingBuilderPage() {
         alert("Template saved.")
       }
       setEditingTemplate(null)
-      setTemplateName("")
     } catch (e) {
       console.error(e)
       alert(e instanceof Error ? e.message : "Failed to save template.")
@@ -229,10 +228,8 @@ export default function TrainingBuilderPage() {
     setWorkoutExercises([...p1, ...p2, ...p3])
     if (forEdit) {
       setEditingTemplate(t)
-      setTemplateName(t.template_name)
     } else {
       setEditingTemplate(null)
-      setTemplateName("")
     }
   }
 
@@ -252,7 +249,6 @@ export default function TrainingBuilderPage() {
   const resetNew = () => {
     setWorkoutTitle("Custom workout")
     setWorkoutDescription("")
-    setTemplateName("")
     setWorkoutExercises([])
     setEditingTemplate(null)
   }
@@ -296,7 +292,6 @@ export default function TrainingBuilderPage() {
           notes: string
         }>
       }
-      setTemplateName(result.template_name)
       setWorkoutTitle(result.workout_title)
       setWorkoutDescription(result.workout_description)
       const defsById = new Map(exerciseDefinitions.map((e) => [e.id, e]))
@@ -617,29 +612,16 @@ export default function TrainingBuilderPage() {
 
           <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
             <h2 className="text-lg font-bold text-[#1a1a2e] mb-4">Save template</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">Template name</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Template name..."
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    className="flex-1 rounded-xl border border-[#E8E5F0] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-                  />
-                  <button
-                    type="button"
-                    onClick={saveTemplate}
-                    disabled={isSaving || !templateName.trim() || workoutExercises.length === 0}
-                    className="flex items-center gap-2 bg-[#7C3AED] text-white px-5 py-2.5 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
-                  >
-                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    {editingTemplate ? "Update" : "Save"}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <p className="text-sm text-[#6B7280] mb-4">The workout title above is used as the template name.</p>
+            <button
+              type="button"
+              onClick={saveTemplate}
+              disabled={isSaving || !workoutTitle.trim() || workoutExercises.length === 0}
+              className="flex items-center gap-2 bg-[#7C3AED] text-white px-5 py-2.5 rounded-xl font-medium hover:opacity-90 disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {editingTemplate ? "Update" : "Save"}
+            </button>
           </div>
         </div>
       </div>

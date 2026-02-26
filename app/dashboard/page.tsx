@@ -48,6 +48,7 @@ export default function DashboardOverview() {
   const [recentUsers, setRecentUsers] = useState<ApiUser[]>([])
   const [recentGallery, setRecentGallery] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadDashboard()
@@ -66,6 +67,10 @@ export default function DashboardOverview() {
     ])
 
     const usersData = await usersRes.json().catch(() => ({}))
+    if (!usersRes.ok) {
+      console.error("[Dashboard] /api/users failed:", usersRes.status, usersData)
+      setError(`Failed to load users: ${usersData.error || usersRes.statusText}`)
+    }
     const users: ApiUser[] = usersRes.ok && Array.isArray(usersData.users) ? usersData.users : []
     const gallery = (galleryRes.data as GalleryItem[]) || []
 
@@ -95,7 +100,11 @@ export default function DashboardOverview() {
       activeUsers,
     })
 
-    setRecentUsers(users.slice(0, 5))
+    // Sort by most recent first
+    const sorted = [...users].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    setRecentUsers(sorted.slice(0, 5))
     setRecentGallery(gallery.slice(0, 6))
     setLoading(false)
   }
@@ -179,6 +188,13 @@ export default function DashboardOverview() {
           Overview of your fitness app metrics
         </p>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -292,6 +308,19 @@ export default function DashboardOverview() {
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     />
+                  ) : item.thumbnail_url ? (
+                    <div className="relative w-full h-full">
+                      <img
+                        src={item.thumbnail_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center">
+                          <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1" />
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#7C3AED] to-[#A78BFA]">
                       <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
