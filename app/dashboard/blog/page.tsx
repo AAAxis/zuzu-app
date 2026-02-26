@@ -539,7 +539,11 @@ function BlogEditorModal({
         </div>
 
         {/* Tabs: Hebrew | English */}
-        <div className="flex border-b border-[#E8E5F0]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-6 pt-2">
+          <p className="text-xs text-[#6B7280]">
+            One article: fill Hebrew and/or English. Saving creates a single multilingual post (one URL).
+          </p>
+          <div className="flex border-b border-[#E8E5F0] sm:border-0">
           <button
             onClick={() => setActiveTab("he")}
             className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-1.5 ${
@@ -566,6 +570,7 @@ function BlogEditorModal({
               <span className="w-2 h-2 rounded-full bg-green-400" />
             )}
           </button>
+        </div>
         </div>
 
         {/* Error */}
