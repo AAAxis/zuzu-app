@@ -51,6 +51,16 @@ const CATEGORIES = [
   "Motivation",
 ]
 
+/** Detect if text is predominantly Hebrew (for dir and original_language). */
+function detectLanguage(text: string): "he" | "en" {
+  if (!text.trim()) return "en"
+  const hebrewRange = /[\u0590-\u05FF\u200F]/g
+  const letters = text.replace(/\s/g, "").replace(/<[^>]+>/g, "")
+  if (!letters.length) return "en"
+  const hebrewCount = (letters.match(hebrewRange) || []).length
+  return hebrewCount / letters.length > 0.25 ? "he" : "en"
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main page                                                          */
 /* ------------------------------------------------------------------ */
@@ -357,6 +367,12 @@ function BlogEditorModal({
     }
   }, [post])
 
+  // Auto-detect language from title and content
+  useEffect(() => {
+    const combined = `${title}\n${content}`.trim()
+    if (combined) setLang(detectLanguage(combined))
+  }, [title, content])
+
   async function handleSave() {
     if (!title.trim()) {
       setError("Title is required")
@@ -581,35 +597,6 @@ function BlogEditorModal({
         {/* Content Tab */}
         {activeTab === "content" && (
           <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-            {/* Language selector */}
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-[#6B7280]">
-                Writing in:
-              </label>
-              <div className="flex rounded-lg border border-[#E8E5F0] overflow-hidden">
-                <button
-                  onClick={() => setLang("en")}
-                  className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                    lang === "en"
-                      ? "bg-[#7C3AED] text-white"
-                      : "bg-white text-[#6B7280] hover:bg-gray-50"
-                  }`}
-                >
-                  English
-                </button>
-                <button
-                  onClick={() => setLang("he")}
-                  className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                    lang === "he"
-                      ? "bg-[#7C3AED] text-white"
-                      : "bg-white text-[#6B7280] hover:bg-gray-50"
-                  }`}
-                >
-                  עברית
-                </button>
-              </div>
-            </div>
-
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-[#6B7280] mb-1">
