@@ -15,6 +15,7 @@ interface Admin {
   full_name: string | null
   avatar_url: string | null
   role: string
+  provider: string
   created_at: string
   last_sign_in_at: string | null
   email_confirmed_at: string | null
@@ -173,17 +174,24 @@ export default function AdminsPage() {
                 onClick={() => setSelectedAdmin(admin)}
                 className="flex items-center gap-4 p-5 hover:bg-[#F8F7FF] cursor-pointer transition-colors"
               >
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-sm font-bold shrink-0">
-                  {(admin.full_name?.[0] || admin.email[0])?.toUpperCase() || "?"}
-                </div>
+                {admin.avatar_url ? (
+                  <img src={admin.avatar_url} alt="" className="w-11 h-11 rounded-full shrink-0 object-cover" />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {(admin.full_name?.[0] || admin.email[0])?.toUpperCase() || "?"}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-[#1a1a2e] truncate">
                       {admin.full_name || admin.email}
                     </p>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F3F0FF] text-[#7C3AED] uppercase shrink-0">
                       <ShieldCheck className="w-3 h-3" />
                       {admin.role}
+                    </span>
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F8F7FF] text-[#6B7280] capitalize shrink-0">
+                      {admin.provider}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5">
@@ -216,9 +224,13 @@ export default function AdminsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-xl font-bold">
-                {(selectedAdmin.full_name?.[0] || selectedAdmin.email[0])?.toUpperCase() || "?"}
-              </div>
+              {selectedAdmin.avatar_url ? (
+                <img src={selectedAdmin.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-xl font-bold">
+                  {(selectedAdmin.full_name?.[0] || selectedAdmin.email[0])?.toUpperCase() || "?"}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-[#1a1a2e] truncate">
@@ -251,6 +263,10 @@ export default function AdminsPage() {
               <div className="flex items-center justify-between py-2 border-b border-[#E8E5F0]">
                 <span className="text-sm text-[#6B7280]">Role</span>
                 <span className="text-sm font-medium text-[#7C3AED] capitalize">{selectedAdmin.role}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-[#E8E5F0]">
+                <span className="text-sm text-[#6B7280]">Provider</span>
+                <span className="text-sm font-medium text-[#1a1a2e] capitalize">{selectedAdmin.provider}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-[#E8E5F0]">
                 <span className="text-sm text-[#6B7280]">Added</span>
