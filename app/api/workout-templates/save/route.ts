@@ -58,7 +58,8 @@ export async function POST(request: Request) {
     )
   }
 
-  const payload = {
+  const now = new Date().toISOString()
+  const basePayload = {
     created_by: body.created_by ?? user.email,
     template_name: templateName,
     workout_title: body.workout_title ?? "Custom workout",
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
   if (body.id) {
     const { error } = await adminClient
       .from("workout_templates")
-      .update(payload)
+      .update(basePayload)
       .eq("id", body.id)
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await adminClient
     .from("workout_templates")
-    .insert(payload)
+    .insert({ ...basePayload, created_date: now })
     .select("id")
     .single()
 
