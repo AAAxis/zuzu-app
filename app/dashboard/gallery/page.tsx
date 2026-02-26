@@ -595,36 +595,19 @@ function UploadModal({
     setError("")
 
     try {
-      const supabase = getSupabase()
-      const mediaType = file.type.startsWith("image/") ? "photo" : "video"
-      const ext = file.name.split(".").pop()
-      const filePath = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+      const formData = new FormData()
+      formData.set("title", title.trim())
+      formData.set("description", description.trim() || "")
+      formData.set("category", category)
+      formData.set("file", file)
 
-      // Upload file to Supabase Storage
-      const { error: uploadErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(filePath, file, { cacheControl: "3600", upsert: false })
+      const res = await fetch("/api/gallery/upload", {
+        method: "POST",
+        body: formData,
+      })
 
-      if (uploadErr) throw new Error(uploadErr.message)
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(BUCKET).getPublicUrl(filePath)
-
-      // Insert gallery record
-      const { error: insertErr } = await supabase
-        .from("training_gallery")
-        .insert({
-          title: title.trim(),
-          description: description.trim() || null,
-          media_type: mediaType,
-          media_url: publicUrl,
-          thumbnail_url: mediaType === "photo" ? publicUrl : null,
-          category,
-        })
-
-      if (insertErr) throw new Error(insertErr.message)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
 
       onUploaded()
     } catch (err: unknown) {
@@ -632,10 +615,14 @@ function UploadModal({
         err instanceof Error ? err.message : typeof err === "string" ? err : "Upload failed. Please try again."
       const isBucketNotFound =
         /bucket not found|Bucket not found|does not exist/i.test(msg)
+      const isRls =
+        /row-level security|RLS|violates row-level security/i.test(msg)
       setError(
         isBucketNotFound
           ? "Storage bucket not set up. Ask an admin to run the storage setup (see README or /api/setup-storage) or create bucket \"training-media\" in Supabase Dashboard → Storage."
-          : msg
+          : isRls
+            ? "Upload failed (permissions). Try again or contact support."
+            : msg
       )
       setUploading(false)
     }
