@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ClipboardList,
+  BookOpen,
 } from "lucide-react"
 
 const navItems = [
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/admins", label: "Admins", icon: ShieldCheck },
   { href: "/dashboard/gallery", label: "Gallery", icon: Image },
+  { href: "/dashboard/blog", label: "Blog", icon: BookOpen },
 ]
 
 export default function DashboardLayout({
