@@ -21,6 +21,12 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_email ON support_tickets (email);
 -- RLS
 ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 
+-- Drop policies if they exist (safe to re-run migration)
+DROP POLICY IF EXISTS "Anyone can submit tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Authenticated users can read tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Authenticated users can update tickets" ON support_tickets;
+DROP POLICY IF EXISTS "Authenticated users can delete tickets" ON support_tickets;
+
 -- Anyone can insert (submit a ticket without being logged in)
 CREATE POLICY "Anyone can submit tickets"
   ON support_tickets FOR INSERT
