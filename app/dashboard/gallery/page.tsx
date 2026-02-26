@@ -10,7 +10,6 @@ import {
   Trash2,
   Image as ImageIcon,
   Video,
-  Filter,
   Grid3X3,
   LayoutList,
   Plus,
@@ -20,8 +19,7 @@ import {
   Loader2,
   ExternalLink,
 } from "lucide-react"
-import type { GalleryItem, GalleryCategory } from "@/lib/types"
-import { GALLERY_CATEGORIES } from "@/lib/types"
+import type { GalleryItem } from "@/lib/types"
 
 const BUCKET = "training-media"
 
@@ -71,8 +69,8 @@ export default function GalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [activeCategory, setActiveCategory] = useState<GalleryCategory>("All")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [showAddMenu, setShowAddMenu] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
   const [showVideoLink, setShowVideoLink] = useState(false)
   const [previewItem, setPreviewItem] = useState<GalleryItem | null>(null)
@@ -121,9 +119,7 @@ export default function GalleryPage() {
       !search ||
       item.title.toLowerCase().includes(search.toLowerCase()) ||
       item.description?.toLowerCase().includes(search.toLowerCase())
-    const matchesCategory =
-      activeCategory === "All" || item.category === activeCategory
-    return matchesSearch && matchesCategory
+    return matchesSearch
   })
 
   const photoCount = items.filter((i) => i.media_type === "photo").length
@@ -199,38 +195,17 @@ export default function GalleryPage() {
         </div>
       </div>
 
-      {/* Category pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {GALLERY_CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              activeCategory === cat
-                ? "bg-[#7C3AED] text-white"
-                : "bg-white text-[#6B7280] border border-[#E8E5F0] hover:border-[#7C3AED] hover:text-[#7C3AED]"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
       {/* Gallery */}
       {filtered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#E8E5F0] text-center py-20">
           <ImageIcon className="w-14 h-14 text-[#E8E5F0] mx-auto mb-4" />
           <p className="text-[#6B7280] font-medium text-lg">
-            {search || activeCategory !== "All"
-              ? "No media matches your filters"
-              : "No media uploaded yet"}
+            {search ? "No media matches your search" : "No media uploaded yet"}
           </p>
           <p className="text-[#6B7280] text-sm mt-1">
-            {search || activeCategory !== "All"
-              ? "Try different filters"
-              : "Upload photos and videos to build your training gallery"}
+            {search ? "Try a different search" : "Upload photos and videos or add video links to build your training gallery"}
           </p>
-          {!search && activeCategory === "All" && (
+          {!search && (
             <button
               onClick={() => setShowUpload(true)}
               className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-[#7C3AED] text-white rounded-xl text-sm font-medium hover:bg-[#6D28D9] transition-colors"
@@ -242,6 +217,14 @@ export default function GalleryPage() {
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {/* New item card */}
+          <div
+            className="group flex flex-col items-center justify-center aspect-square rounded-2xl border-2 border-dashed border-[#E8E5F0] bg-[#F8F7FF] hover:border-[#7C3AED] hover:bg-[#F3F0FF] transition-all cursor-pointer"
+            onClick={() => setShowAddMenu(true)}
+          >
+            <Plus className="w-10 h-10 text-[#7C3AED] mb-2" />
+            <span className="text-sm font-medium text-[#7C3AED]">New item</span>
+          </div>
           {filtered.map((item) => (
             <div
               key={item.id}
@@ -320,14 +303,9 @@ export default function GalleryPage() {
                 <p className="text-sm font-semibold text-[#1a1a2e] truncate">
                   {item.title}
                 </p>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-xs text-[#6B7280]">
-                    {item.category}
-                  </span>
-                  <span className="text-xs text-[#6B7280]">
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </span>
-                </div>
+                <span className="text-xs text-[#6B7280] block mt-1">
+                  {new Date(item.created_at).toLocaleDateString()}
+                </span>
               </div>
             </div>
           ))}
@@ -393,9 +371,6 @@ export default function GalleryPage() {
                     )}
                     {item.media_type === "photo" ? "photo" : isExternalVideoUrl(item.media_url) ? parseVideoUrl(item.media_url).provider || "link" : "video"}
                   </span>
-                  <span className="text-xs text-[#6B7280]">
-                    {item.category}
-                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -415,6 +390,49 @@ export default function GalleryPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Add menu modal */}
+      {showAddMenu && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowAddMenu(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-[#1a1a2e] mb-4">Add new item</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setShowAddMenu(false)
+                  setShowUpload(true)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[#E8E5F0] hover:border-[#7C3AED] hover:bg-[#F8F7FF] text-left transition-colors"
+              >
+                <Upload className="w-5 h-5 text-[#7C3AED]" />
+                <span className="font-medium text-[#1a1a2e]">Upload file</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddMenu(false)
+                  setShowVideoLink(true)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[#E8E5F0] hover:border-[#7C3AED] hover:bg-[#F8F7FF] text-left transition-colors"
+              >
+                <Link2 className="w-5 h-5 text-[#7C3AED]" />
+                <span className="font-medium text-[#1a1a2e]">Add video link</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowAddMenu(false)}
+              className="mt-4 w-full py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-medium text-[#6B7280] hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -517,9 +535,6 @@ export default function GalleryPage() {
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-3 text-xs text-[#6B7280]">
-                <span className="bg-[#F3F0FF] px-2.5 py-1 rounded-full text-[#7C3AED] font-medium">
-                  {previewItem.category}
-                </span>
                 <span>
                   {new Date(previewItem.created_at).toLocaleDateString(
                     "en-US",
@@ -553,7 +568,6 @@ function UploadModal({
   const [preview, setPreview] = useState<string | null>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [category, setCategory] = useState("Strength")
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [dragActive, setDragActive] = useState(false)
@@ -598,7 +612,6 @@ function UploadModal({
       const formData = new FormData()
       formData.set("title", title.trim())
       formData.set("description", description.trim() || "")
-      formData.set("category", category)
       formData.set("file", file)
 
       const res = await fetch("/api/gallery/upload", {
@@ -730,23 +743,6 @@ function UploadModal({
               className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] resize-none"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
-              Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] bg-white"
-            >
-              {GALLERY_CATEGORIES.filter((c) => c !== "All").map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {error && (
@@ -798,7 +794,6 @@ function VideoLinkModal({
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [category, setCategory] = useState("Strength")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [detected, setDetected] = useState<{ provider: "youtube" | "vimeo"; videoId: string } | null>(null)
@@ -838,7 +833,7 @@ function VideoLinkModal({
           media_type: "video",
           media_url: url.trim(),
           thumbnail_url: thumbnailUrl || null,
-          category,
+          category: "Other",
         })
 
       if (insertErr) throw new Error(insertErr.message)
@@ -941,23 +936,6 @@ function VideoLinkModal({
               rows={3}
               className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] resize-none"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">
-              Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED] bg-white"
-            >
-              {GALLERY_CATEGORIES.filter((c) => c !== "All").map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 

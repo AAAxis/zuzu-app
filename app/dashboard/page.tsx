@@ -13,7 +13,19 @@ import {
   ArrowDownRight,
 } from "lucide-react"
 import Link from "next/link"
-import type { UserProfile, GalleryItem } from "@/lib/types"
+import type { GalleryItem } from "@/lib/types"
+
+/** User shape returned by /api/users (auth + profile merge) */
+interface ApiUser {
+  id: string
+  email: string
+  full_name: string | null
+  weight_kg: number | null
+  daily_steps: number | null
+  bmr: number | null
+  created_at: string
+  last_sign_in_at: string | null
+}
 
 interface DashboardStats {
   totalUsers: number
@@ -33,7 +45,7 @@ export default function DashboardOverview() {
     galleryItems: 0,
     activeUsers: 0,
   })
-  const [recentUsers, setRecentUsers] = useState<UserProfile[]>([])
+  const [recentUsers, setRecentUsers] = useState<ApiUser[]>([])
   const [recentGallery, setRecentGallery] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -44,15 +56,17 @@ export default function DashboardOverview() {
   async function loadDashboard() {
     const supabase = getSupabase()
 
+    // Use API for users so we get all auth users (service role); client-side user_profiles is RLS-limited
     const [usersRes, galleryRes] = await Promise.all([
-      supabase.from("user_profiles").select("*"),
+      fetch("/api/users"),
       supabase
         .from("training_gallery")
         .select("*")
         .order("created_at", { ascending: false }),
     ])
 
-    const users = (usersRes.data as UserProfile[]) || []
+    const usersData = await usersRes.json().catch(() => ({}))
+    const users: ApiUser[] = usersRes.ok && Array.isArray(usersData.users) ? usersData.users : []
     const gallery = (galleryRes.data as GalleryItem[]) || []
 
     const totalSteps = users.reduce((sum, u) => sum + (u.daily_steps || 0), 0)
@@ -67,9 +81,10 @@ export default function DashboardOverview() {
 
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    const activeUsers = users.filter(
-      (u) => new Date(u.updated_at) >= sevenDaysAgo
-    ).length
+    const activeUsers = users.filter((u) => {
+      const t = u.last_sign_in_at || u.created_at
+      return t && new Date(t) >= sevenDaysAgo
+    }).length
 
     setStats({
       totalUsers: users.length,
@@ -222,11 +237,11 @@ export default function DashboardOverview() {
                   className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#F8F7FF] transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center text-white text-sm font-bold shrink-0">
-                    {user.full_name?.[0]?.toUpperCase() || "?"}
+                    {(user.full_name || user.email)?.[0]?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#1a1a2e] truncate">
-                      {user.full_name}
+                      {user.full_name || user.email || "—"}
                     </p>
                     <p className="text-xs text-[#6B7280] truncate">
                       {user.email}
@@ -234,10 +249,10 @@ export default function DashboardOverview() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-[#1a1a2e]">
-                      {user.weight_kg} kg
+                      {user.weight_kg != null ? `${user.weight_kg} kg` : "—"}
                     </p>
                     <p className="text-xs text-[#6B7280]">
-                      {user.daily_steps.toLocaleString()} steps
+                      {(user.daily_steps ?? 0).toLocaleString()} steps
                     </p>
                   </div>
                 </div>

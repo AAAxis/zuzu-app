@@ -518,6 +518,244 @@ function ExerciseDetailEditModal({
   )
 }
 
+/* ───────── Exercise DB Search Modal ───────── */
+function ExerciseDbSearchModal({
+  searchType,
+  setSearchType,
+  searchTerm,
+  setSearchTerm,
+  selectedBodyPart,
+  setSelectedBodyPart,
+  selectedEquipment,
+  setSelectedEquipment,
+  bodyParts,
+  equipmentList,
+  results,
+  loading,
+  handleSearch,
+  canSearch,
+  setSelectedExercise,
+  getMediaUrl,
+  saveToLibrary,
+  savingId,
+  savedId,
+  saveError,
+  setSaveError,
+  onClose,
+}: {
+  searchType: SearchType
+  setSearchType: (t: SearchType) => void
+  searchTerm: string
+  setSearchTerm: (s: string) => void
+  selectedBodyPart: string
+  setSelectedBodyPart: (s: string) => void
+  selectedEquipment: string
+  setSelectedEquipment: (s: string) => void
+  bodyParts: string[]
+  equipmentList: string[]
+  results: ExerciseDBItem[]
+  loading: boolean
+  handleSearch: () => void
+  canSearch: boolean
+  setSelectedExercise: (ex: ExerciseDBItem | null) => void
+  getMediaUrl: (ex: ExerciseDBItem) => string | null
+  saveToLibrary: (ex: ExerciseDBItem) => void
+  savingId: string | null
+  savedId: string | null
+  saveError: string | null
+  setSaveError: (s: string | null) => void
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl border border-[#E8E5F0] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-[#E8E5F0] flex items-center justify-between shrink-0">
+          <h2 className="text-xl font-bold text-[#1a1a2e] flex items-center gap-2">
+            <Database className="w-6 h-6 text-[#7C3AED]" />
+            Search Exercise DB
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2.5 rounded-xl border border-[#E8E5F0] text-[#6B7280] hover:bg-[#F8F7FF] hover:text-[#1a1a2e]"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Search window */}
+          <div className="rounded-2xl border border-[#E8E5F0] bg-[#F8F7FF] p-5 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { value: "name" as const, label: "Search by name" },
+                  { value: "bodyPart" as const, label: "By body part" },
+                  { value: "equipment" as const, label: "By equipment" },
+                ] as const
+              ).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setSearchType(value)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    searchType === value
+                      ? "bg-[#7C3AED] text-white"
+                      : "bg-white text-[#6B7280] border border-[#E8E5F0] hover:border-[#7C3AED] hover:text-[#7C3AED]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {searchType === "name" && (
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
+                <input
+                  type="text"
+                  placeholder="e.g. bench press, squat, pull-up..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="w-full rounded-xl border border-[#E8E5F0] pl-11 pr-4 py-3 text-[#1a1a2e] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent bg-white"
+                />
+              </div>
+            )}
+            {searchType === "bodyPart" && (
+              <select
+                value={selectedBodyPart}
+                onChange={(e) => setSelectedBodyPart(e.target.value)}
+                className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 text-[#1a1a2e] focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
+              >
+                <option value="">Select body part</option>
+                {bodyParts.map((bp) => (
+                  <option key={bp} value={bp}>{bp}</option>
+                ))}
+              </select>
+            )}
+            {searchType === "equipment" && (
+              <select
+                value={selectedEquipment}
+                onChange={(e) => setSelectedEquipment(e.target.value)}
+                className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 text-[#1a1a2e] focus:outline-none focus:ring-2 focus:ring-[#7C3AED] bg-white"
+              >
+                <option value="">Select equipment</option>
+                {equipmentList.map((eq) => (
+                  <option key={eq} value={eq}>{eq}</option>
+                ))}
+              </select>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={!canSearch || loading}
+              className="w-full flex items-center justify-center gap-2 bg-[#7C3AED] text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            >
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Searching...</>
+              ) : (
+                <><Search className="w-4 h-4" /> Search</>
+              )}
+            </button>
+          </div>
+
+          {saveError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between gap-2">
+              <span>{saveError}</span>
+              <button type="button" onClick={() => setSaveError(null)} className="text-red-600 hover:text-red-800 shrink-0" aria-label="Dismiss">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Results */}
+          {results.length > 0 ? (
+            <div>
+              <p className="text-sm text-[#6B7280] mb-3">Found {results.length} exercises</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[50vh] overflow-y-auto">
+                <AnimatePresence>
+                  {results.map((exercise, index) => {
+                    const mediaUrl = getMediaUrl(exercise)
+                    const exerciseId = exercise.exerciseId ?? exercise.id ?? `ex-${index}`
+                    const name = exercise.name || "Unknown"
+                    return (
+                      <motion.div
+                        key={exerciseId}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-xl border border-[#E8E5F0] bg-[#F8F7FF] overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setSelectedExercise(exercise)}
+                          className="block w-full text-left flex-1 flex flex-col min-w-0"
+                        >
+                          <div className="aspect-square w-full min-h-[120px] bg-[#E8E5F0] overflow-hidden">
+                            <ExerciseMedia
+                              src={mediaUrl}
+                              alt={name}
+                              boxClassName="w-full aspect-square min-h-[120px]"
+                              objectFit="cover"
+                            />
+                          </div>
+                          <div className="p-3 flex-1 flex flex-col min-w-0">
+                            <p className="font-semibold text-[#1a1a2e] line-clamp-2 text-sm">{name}</p>
+                            {(exercise.bodyParts?.length ?? 0) > 0 && (
+                              <p className="text-xs text-[#6B7280] mt-0.5 truncate">{exercise.bodyParts?.join(", ")}</p>
+                            )}
+                          </div>
+                        </button>
+                        <div className="p-2 border-t border-[#E8E5F0] flex items-center justify-end gap-1 bg-white/80">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedExercise(exercise)}
+                            className="p-2 rounded-lg text-[#7C3AED] hover:bg-[#F3F0FF]"
+                            title="Details"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => saveToLibrary(exercise)}
+                            disabled={savingId === String(exerciseId)}
+                            className="p-2 rounded-lg text-[#10B981] hover:bg-[#ECFDF5] disabled:opacity-50"
+                            title="Save to library"
+                          >
+                            {savingId === String(exerciseId) ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : savedId === String(exerciseId) ? (
+                              <CheckCircle className="w-4 h-4" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 rounded-2xl border border-[#E8E5F0] bg-[#F8F7FF]">
+              <Search className="w-12 h-12 text-[#E8E5F0] mx-auto mb-3" />
+              <p className="text-[#6B7280] text-sm">
+                Choose a search type, enter a term or select an option, then click Search to find exercises.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ExercisesPage() {
   const [searchType, setSearchType] = useState<SearchType>("name")
   const [searchTerm, setSearchTerm] = useState("")
@@ -534,6 +772,7 @@ export default function ExercisesPage() {
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showExerciseDbModal, setShowExerciseDbModal] = useState(false)
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<SavedExercise | null>(null)
 
   useEffect(() => {
@@ -654,107 +893,58 @@ export default function ExercisesPage() {
             Exercise Library
           </h1>
           <p className="text-[#6B7280] mt-1">
-            Search 11,000+ exercises or create your own custom exercises.
+            Use your saved exercises or browse 11,000+ from Exercise DB to add to your library.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#7C3AED] text-white rounded-xl text-sm font-medium hover:bg-[#6D28D9] transition-colors shadow-lg shadow-purple-500/20 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" />
-          Create My Own
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6 space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { value: "name" as const, label: "Search by name" },
-              { value: "bodyPart" as const, label: "By body part" },
-              { value: "equipment" as const, label: "By equipment" },
-            ] as const
-          ).map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setSearchType(value)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                searchType === value
-                  ? "bg-[#7C3AED] text-white shadow-lg shadow-purple-500/20"
-                  : "bg-[#F8F7FF] text-[#6B7280] hover:bg-[#E8E5F0]"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowExerciseDbModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#7C3AED] text-[#7C3AED] rounded-xl text-sm font-medium hover:bg-[#F8F7FF] transition-colors"
+          >
+            <Database className="w-4 h-4" />
+            Search Exercise DB
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#7C3AED] text-white rounded-xl text-sm font-medium hover:bg-[#6D28D9] transition-colors shadow-lg shadow-purple-500/20 whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            Create My Own
+          </button>
         </div>
-
-        {searchType === "name" && (
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
-            <input
-              type="text"
-              placeholder="e.g. bench press, squat..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 pr-10 text-[#1a1a2e] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#7C3AED] focus:border-transparent"
-            />
-          </div>
-        )}
-        {searchType === "bodyPart" && (
-          <select
-            value={selectedBodyPart}
-            onChange={(e) => setSelectedBodyPart(e.target.value)}
-            className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 text-[#1a1a2e] focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-          >
-            <option value="">Select body part</option>
-            {bodyParts.map((bp) => (
-              <option key={bp} value={bp}>
-                {bp}
-              </option>
-            ))}
-          </select>
-        )}
-        {searchType === "equipment" && (
-          <select
-            value={selectedEquipment}
-            onChange={(e) => setSelectedEquipment(e.target.value)}
-            className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 text-[#1a1a2e] focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
-          >
-            <option value="">Select equipment</option>
-            {equipmentList.map((eq) => (
-              <option key={eq} value={eq}>
-                {eq}
-              </option>
-            ))}
-          </select>
-        )}
-
-        <button
-          type="button"
-          onClick={handleSearch}
-          disabled={!canSearch || loading}
-          className="w-full flex items-center justify-center gap-2 bg-[#7C3AED] text-white py-3 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Searching...
-            </>
-          ) : (
-            <>
-              <Search className="w-4 h-4" />
-              Search ExerciseDB
-            </>
-          )}
-        </button>
       </div>
 
-      {saveError && (
+      {/* Exercise DB Search Modal */}
+      {showExerciseDbModal && (
+        <ExerciseDbSearchModal
+          searchType={searchType}
+          setSearchType={setSearchType}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedBodyPart={selectedBodyPart}
+          setSelectedBodyPart={setSelectedBodyPart}
+          selectedEquipment={selectedEquipment}
+          setSelectedEquipment={setSelectedEquipment}
+          bodyParts={bodyParts}
+          equipmentList={equipmentList}
+          results={results}
+          loading={loading}
+          handleSearch={handleSearch}
+          canSearch={canSearch}
+          setSelectedExercise={setSelectedExercise}
+          getMediaUrl={getMediaUrl}
+          saveToLibrary={saveToLibrary}
+          savingId={savingId}
+          savedId={savedId}
+          saveError={saveError}
+          setSaveError={setSaveError}
+          onClose={() => setShowExerciseDbModal(false)}
+        />
+      )}
+
+      {saveError && !showExerciseDbModal && (
         <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between gap-2">
           <span>{saveError}</span>
           <button
@@ -765,82 +955,6 @@ export default function ExercisesPage() {
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
-      )}
-
-      {/* Results — Vitrix-style card grid: large GIF on top, name below */}
-      {results.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
-          <p className="text-sm text-[#6B7280] mb-4">
-            Found {results.length} exercises
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto">
-            <AnimatePresence>
-              {results.map((exercise, index) => {
-                const mediaUrl = getMediaUrl(exercise)
-                const exerciseId = exercise.exerciseId ?? exercise.id ?? `ex-${index}`
-                const name = exercise.name || "Unknown"
-                return (
-                  <motion.div
-                    key={exerciseId}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-[#E8E5F0] bg-[#F8F7FF] overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedExercise(exercise)}
-                      className="block w-full text-left flex-1 flex flex-col min-w-0"
-                    >
-                      <div className="aspect-square w-full min-h-[140px] bg-[#E8E5F0] overflow-hidden">
-                        <ExerciseMedia
-                          src={mediaUrl}
-                          alt={name}
-                          boxClassName="w-full aspect-square min-h-[140px]"
-                          objectFit="cover"
-                        />
-                      </div>
-                      <div className="p-3 flex-1 flex flex-col min-w-0">
-                        <p className="font-semibold text-[#1a1a2e] line-clamp-2 text-sm">
-                          {name}
-                        </p>
-                        {(exercise.bodyParts?.length ?? 0) > 0 && (
-                          <p className="text-xs text-[#6B7280] mt-0.5 truncate">
-                            {exercise.bodyParts?.join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                    <div className="p-2 border-t border-[#E8E5F0] flex items-center justify-end gap-1 bg-white/80">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedExercise(exercise)}
-                        className="p-2 rounded-lg text-[#7C3AED] hover:bg-[#F3F0FF] transition-colors"
-                        title="Details"
-                      >
-                        <Info className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => saveToLibrary(exercise)}
-                        disabled={savingId === String(exerciseId)}
-                        className="p-2 rounded-lg text-[#10B981] hover:bg-[#ECFDF5] transition-colors disabled:opacity-50"
-                        title="Save to library"
-                      >
-                        {savingId === String(exerciseId) ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : savedId === String(exerciseId) ? (
-                          <CheckCircle className="w-4 h-4" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-          </div>
         </div>
       )}
 
@@ -856,7 +970,7 @@ export default function ExercisesPage() {
           </div>
         ) : myLibrary.length === 0 ? (
           <p className="text-[#6B7280] py-8 text-center">
-            No exercises saved yet. Search above and click Save to add exercises to your library.
+            No exercises saved yet. Click &quot;Search Exercise DB&quot; to find and add exercises, or &quot;Create My Own&quot; to add a custom exercise.
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
