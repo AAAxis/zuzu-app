@@ -5,7 +5,8 @@ import { useParams, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { getSupabase } from "@/lib/supabase"
-import { Dumbbell, Globe } from "lucide-react"
+import { Dumbbell } from "lucide-react"
+import { he } from "@/lib/messages-he"
 
 interface BlogPost {
   id: string
@@ -39,14 +40,12 @@ export default function BlogPostPage() {
   const searchParams = useSearchParams()
   const [post, setPost] = useState<BlogPost | null>(null)
   const [loading, setLoading] = useState(true)
-  const [lang, setLang] = useState<Lang>("en")
+  const [lang, setLang] = useState<Lang>("he")
 
   useEffect(() => {
     const urlLang = searchParams.get("lang")
     if (urlLang === "he" || urlLang === "en") {
       setLang(urlLang)
-    } else if (typeof navigator !== "undefined" && navigator.language?.startsWith("he")) {
-      setLang("he")
     }
   }, [searchParams])
 
@@ -64,8 +63,6 @@ export default function BlogPostPage() {
     if (params.slug) fetchPost()
   }, [params.slug])
 
-  const isRtl = lang === "he"
-
   const header = (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-[var(--border)]">
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -76,20 +73,8 @@ export default function BlogPostPage() {
           <span className="text-xl font-bold">ZUZU</span>
         </Link>
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm text-[var(--muted)] hover:text-black transition-colors">
-            {isRtl ? "ראשי" : "Home"}
-          </Link>
-          <Link href="/blog" className="text-sm text-[var(--muted)] hover:text-black transition-colors">
-            {isRtl ? "בלוג" : "Blog"}
-          </Link>
-          <button
-            onClick={() => setLang(lang === "en" ? "he" : "en")}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--light)] border border-[var(--border)] hover:border-[var(--primary)] transition-colors"
-            title={lang === "en" ? "Switch to Hebrew" : "Switch to English"}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            {lang === "en" ? "עב" : "EN"}
-          </button>
+          <Link href="/" className="text-sm text-[var(--muted)] hover:text-black transition-colors">{he.navHome}</Link>
+          <Link href="/blog" className="text-sm text-[var(--muted)] hover:text-black transition-colors">{he.blogPageTitle}</Link>
         </div>
       </nav>
     </header>
@@ -101,7 +86,7 @@ export default function BlogPostPage() {
         {header}
         <main className="min-h-screen bg-white">
           <div className="pt-28 pb-16 max-w-3xl mx-auto px-6">
-            <p className="text-[var(--muted)]">{isRtl ? "טוען..." : "Loading..."}</p>
+            <p className="text-[var(--muted)]">{he.loading}</p>
           </div>
         </main>
       </>
@@ -114,12 +99,8 @@ export default function BlogPostPage() {
         {header}
         <main className="min-h-screen bg-white">
           <div className="pt-28 pb-16 max-w-3xl mx-auto px-6 text-center">
-            <h1 className="text-3xl font-bold mb-4">
-              {isRtl ? "הפוסט לא נמצא" : "Post not found"}
-            </h1>
-            <Link href="/blog" className="text-[var(--primary)] hover:underline">
-              {isRtl ? "← חזרה לבלוג" : "← Back to blog"}
-            </Link>
+            <h1 className="text-3xl font-bold mb-4">{he.postNotFound}</h1>
+            <Link href="/blog" className="text-[var(--primary)] hover:underline">{he.backToBlog}</Link>
           </div>
         </main>
       </>
@@ -133,12 +114,12 @@ export default function BlogPostPage() {
     <>
       {header}
       <main className="min-h-screen bg-white">
-        <article className="pt-28 pb-16 max-w-3xl mx-auto px-6" dir={isRtl ? "rtl" : "ltr"}>
+        <article className="pt-28 pb-16 max-w-3xl mx-auto px-6">
           <Link
             href="/blog"
             className="text-sm text-[var(--muted)] hover:text-[var(--primary)] transition-colors mb-6 inline-block"
           >
-            {isRtl ? "← חזרה לבלוג" : "← Back to blog"}
+            {he.backToBlog}
           </Link>
           {post.category && (
             <span className="inline-block bg-[var(--primary)] text-white text-xs font-medium px-3 py-1 rounded-full mb-4 mx-2">
@@ -150,19 +131,16 @@ export default function BlogPostPage() {
           </h1>
           <div className="flex items-center gap-4 text-sm text-[var(--muted)] mb-8">
             {post.author && (
-              <span>{isRtl ? `מאת ${post.author}` : `By ${post.author}`}</span>
+              <span>{he.by} {post.author}</span>
             )}
             {post.published_at && (
               <span>
-                {new Date(post.published_at).toLocaleDateString(
-                  isRtl ? "he-IL" : "en-US",
-                  { year: "numeric", month: "long", day: "numeric" }
-                )}
+                {new Date(post.published_at).toLocaleDateString("he-IL", { year: "numeric", month: "long", day: "numeric" })}
               </span>
             )}
             {post.read_time && (
               <span>
-                {post.read_time} {isRtl ? "דק׳ קריאה" : "min read"}
+                {post.read_time} {he.minRead}
               </span>
             )}
           </div>

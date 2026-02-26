@@ -5,6 +5,7 @@ import { getSupabase } from "@/lib/supabase"
 import { Dumbbell, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { he } from "@/lib/messages-he"
 
 type View = "login" | "forgot-password"
 
@@ -21,10 +22,10 @@ function LoginForm() {
   useEffect(() => {
     const err = searchParams.get("error")
     if (err === "not_admin") {
-      setError("Access denied. Admin privileges required.")
+      setError(he.accessDenied)
       getSupabase().auth.signOut()
     } else if (err === "auth_failed") {
-      setError("Authentication failed. Please try again.")
+      setError(he.authFailed)
     }
   }, [searchParams])
 
@@ -52,7 +53,7 @@ function LoginForm() {
     })
 
     if (error) {
-      setError(error?.message ?? "Sign in failed.")
+      setError(error?.message ?? he.authFailed)
       setLoading(false)
       return
     }
@@ -71,12 +72,12 @@ function LoginForm() {
     })
 
     if (error) {
-      setError(error?.message ?? "Failed to send reset email.")
+      setError(error?.message ?? he.authFailed)
       setLoading(false)
       return
     }
 
-    setSuccessMessage("Check your email for a password reset link.")
+    setSuccessMessage(he.checkEmail)
     setLoading(false)
   }
 
@@ -84,10 +85,9 @@ function LoginForm() {
     <div className="bg-white border border-[var(--border)] rounded-3xl p-8 shadow-lg">
       {view === "login" && (
         <>
-          <h1 className="text-2xl font-bold mb-1">Welcome back</h1>
-          <p className="text-[var(--muted)] text-sm mb-6">Sign in to your dashboard</p>
+          <h1 className="text-2xl font-bold mb-1">{he.loginWelcome}</h1>
+          <p className="text-[var(--muted)] text-sm mb-6">{he.loginSubtitle}</p>
 
-          {/* Google Sign In */}
           <button
             onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[var(--border)] bg-white hover:bg-gray-50 transition-colors text-sm font-medium"
@@ -98,43 +98,42 @@ function LoginForm() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Continue with Google
+            {he.continueWithGoogle}
           </button>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-[var(--border)]" />
-            <span className="text-xs text-[var(--muted)]">or</span>
+            <span className="text-xs text-[var(--muted)]">{he.or}</span>
             <div className="flex-1 h-px bg-[var(--border)]" />
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <label className="block text-sm font-medium mb-1.5">{he.email}</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
+                <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={he.emailPlaceholder}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
+                  className="w-full pr-10 pl-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1.5">Password</label>
+              <label className="block text-sm font-medium mb-1.5">{he.password}</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
+                <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
+                  placeholder={he.passwordPlaceholder}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
+                  className="w-full pr-10 pl-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
                 />
               </div>
             </div>
@@ -149,10 +148,10 @@ function LoginForm() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
+                  {he.signingIn}
                 </>
               ) : (
-                "Sign In"
+                he.signIn
               )}
             </button>
           </form>
@@ -165,7 +164,7 @@ function LoginForm() {
             }}
             className="w-full text-center text-sm text-[var(--primary)] font-medium mt-4 hover:underline"
           >
-            Forgot your password?
+            {he.forgotPassword}
           </button>
         </>
       )}
@@ -181,26 +180,24 @@ function LoginForm() {
             className="flex items-center gap-1 text-sm text-[var(--muted)] hover:text-[var(--foreground)] mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to login
+            {he.backToLogin}
           </button>
 
-          <h1 className="text-2xl font-bold mb-1">Reset password</h1>
-          <p className="text-[var(--muted)] text-sm mb-6">
-            Enter your email and we&apos;ll send you a reset link.
-          </p>
+          <h1 className="text-2xl font-bold mb-1">{he.resetPassword}</h1>
+          <p className="text-[var(--muted)] text-sm mb-6">{he.resetPasswordSubtitle}</p>
 
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
+              <label className="block text-sm font-medium mb-1.5">{he.email}</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
+                <Mail className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={he.emailPlaceholder}
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
+                  className="w-full pr-10 pl-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm"
                 />
               </div>
             </div>
@@ -216,10 +213,10 @@ function LoginForm() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Sending...
+                  {he.sending}
                 </>
               ) : (
-                "Send Reset Link"
+                he.sendResetLink
               )}
             </button>
           </form>

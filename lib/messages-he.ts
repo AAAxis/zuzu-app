@@ -69,7 +69,7 @@ export const he = {
   planProFeature3: "אנליטיקה מתקדמת",
   planProFeature4: "תוכניות תזונה מותאמות",
   planProFeature5: "ללא פרסומות",
-  planProFeature6: "תמיכה priorit",
+  planProFeature6: "תמיכה עדיפה",
   ctaTitle: "מוכנים לשינוי? 🚀",
   ctaSubtitle: "הצטרפו לאלפים שמתאמנים כבר חכם יותר עם ZUZU. האימון הראשון שלכם במרחק לחיצה.",
   downloadFree: "הורדה חינם",
