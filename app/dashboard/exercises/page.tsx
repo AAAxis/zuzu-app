@@ -17,6 +17,7 @@ import {
   ImagePlus,
   Play,
   Trash2,
+  Pencil,
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import {
@@ -44,6 +45,7 @@ interface SavedExercise {
   name: string
   muscle_group: string | null
   equipment: string | null
+  description?: string | null
   video_url: string | null
   exercisedb_gif_url: string | null
   exercisedb_image_url: string | null
@@ -119,6 +121,7 @@ function CreateExerciseModal({
         name: name.trim(),
         muscle_group: muscleGroup || null,
         equipment: equipment || null,
+        description: description.trim() || null,
         video_url: videoUrl,
         exercisedb_gif_url: null,
         exercisedb_image_url: imageUrl,
@@ -147,7 +150,12 @@ function CreateExerciseModal({
               <Plus className="w-5 h-5 text-[#7C3AED]" />
               Create My Own Exercise
             </h2>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-[#6B7280]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2.5 rounded-xl border border-[#E8E5F0] text-[#1a1a2e] hover:bg-gray-100 hover:border-[#E8E5F0] transition-colors"
+              aria-label="Close"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -256,7 +264,9 @@ function GalleryPickerModal({ onClose, onSelect }: { onClose: () => void; onSele
             <ImageIcon className="w-5 h-5 text-[#7C3AED]" />
             Select from Gallery
           </h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 text-[#6B7280]"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="p-2.5 rounded-xl border border-[#E8E5F0] text-[#1a1a2e] hover:bg-gray-100" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
@@ -301,6 +311,213 @@ function GalleryPickerModal({ onClose, onSelect }: { onClose: () => void; onSele
   )
 }
 
+/* ───────── Exercise Detail + Edit Modal (for My Library) ───────── */
+function ExerciseDetailEditModal({
+  exercise,
+  onClose,
+  onUpdated,
+  onDeleted,
+}: {
+  exercise: SavedExercise
+  onClose: () => void
+  onUpdated: (updated: SavedExercise) => void
+  onDeleted?: () => void
+}) {
+  const [name, setName] = useState(exercise.name)
+  const [muscleGroup, setMuscleGroup] = useState(exercise.muscle_group ?? "")
+  const [equipment, setEquipment] = useState(exercise.equipment ?? "")
+  const [description, setDescription] = useState(exercise.description ?? "")
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState("")
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false)
+  const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null)
+  const imageUrl = exercise.exercisedb_gif_url || exercise.exercisedb_image_url
+  const videoUrl = exercise.video_url
+
+  async function handleSave() {
+    if (!name.trim()) return
+    setSaving(true)
+    setError("")
+    try {
+      let finalImageUrl: string | null = exercise.exercisedb_image_url || exercise.exercisedb_gif_url
+      let finalVideoUrl: string | null = exercise.video_url
+      if (selectedGalleryItem) {
+        if (selectedGalleryItem.media_type === "photo") {
+          finalImageUrl = selectedGalleryItem.media_url
+        } else {
+          finalVideoUrl = selectedGalleryItem.media_url
+          const thumb = getVideoThumbnail(selectedGalleryItem.media_url)
+          finalImageUrl = thumb || selectedGalleryItem.thumbnail_url || finalImageUrl
+        }
+      }
+      const res = await fetch("/api/exercises/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: exercise.id,
+          name: name.trim(),
+          muscle_group: muscleGroup || null,
+          equipment: equipment || null,
+          description: description.trim() || null,
+          video_url: finalVideoUrl,
+          exercisedb_image_url: finalImageUrl,
+          exercisedb_gif_url: finalImageUrl,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
+      onUpdated({
+        ...exercise,
+        name: name.trim(),
+        muscle_group: muscleGroup || null,
+        equipment: equipment || null,
+        description: description.trim() || null,
+        video_url: finalVideoUrl,
+        exercisedb_image_url: finalImageUrl,
+        exercisedb_gif_url: finalImageUrl,
+      })
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete "${exercise.name}" from your library?`)) return
+    setDeleting(true)
+    setError("")
+    try {
+      const res = await fetch("/api/exercises/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: exercise.id }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error((data as { error?: string }).error || "Failed to delete")
+      }
+      onDeleted?.()
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const displayImageUrl = selectedGalleryItem
+    ? selectedGalleryItem.media_type === "photo"
+      ? selectedGalleryItem.media_url
+      : getVideoThumbnail(selectedGalleryItem.media_url) || selectedGalleryItem.thumbnail_url
+    : imageUrl
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+        <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-[#E8E5F0] flex items-center justify-between shrink-0">
+            <h2 className="text-lg font-bold text-[#1a1a2e] flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-[#7C3AED]" />
+              Details & Edit
+            </h2>
+            <button type="button" onClick={onClose} className="p-2.5 rounded-xl border border-[#E8E5F0] text-[#1a1a2e] hover:bg-gray-100" aria-label="Close">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            {/* Preview / media */}
+            {(displayImageUrl || videoUrl) && (
+              <div className="rounded-xl overflow-hidden border border-[#E8E5F0] bg-[#F8F7FF] aspect-video max-h-48">
+                {displayImageUrl && (
+                  <img src={displayImageUrl} alt={name} className="w-full h-full object-contain" />
+                )}
+                {videoUrl && !displayImageUrl && (
+                  <video src={videoUrl} controls className="w-full h-full object-contain" />
+                )}
+              </div>
+            )}
+
+            {/* Edit form */}
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Muscle group</label>
+                <select value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20">
+                  <option value="">—</option>
+                  {MUSCLE_GROUPS.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Equipment</label>
+                <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20">
+                  <option value="">—</option>
+                  {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Description</label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Instructions, notes..." className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Media from Gallery (optional)</label>
+              {selectedGalleryItem ? (
+                <div className="flex items-center gap-2 p-2 rounded-xl border border-[#E8E5F0] bg-[#F8F7FF]">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#E8E5F0] shrink-0">
+                    {selectedGalleryItem.media_type === "photo" ? (
+                      <img src={selectedGalleryItem.media_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center"><Play className="w-5 h-5 text-[#7C3AED]" /></div>
+                    )}
+                  </div>
+                  <span className="text-sm truncate flex-1">{selectedGalleryItem.title}</span>
+                  <button type="button" onClick={() => setSelectedGalleryItem(null)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setShowGalleryPicker(true)} className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#E8E5F0] text-[#6B7280] text-sm hover:border-[#7C3AED] hover:text-[#7C3AED] flex items-center justify-center gap-2">
+                  <ImagePlus className="w-4 h-4" /> Change media from Gallery
+                </button>
+              )}
+            </div>
+
+            {error && <p className="text-red-600 text-sm">{error}</p>}
+          </div>
+          <div className="p-4 border-t border-[#E8E5F0] flex flex-wrap gap-2 shrink-0">
+            {onDeleted && (
+              <button type="button" onClick={handleDelete} disabled={deleting} className="px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin inline" /> : <Trash2 className="w-4 h-4 inline mr-1" />}
+                Delete
+              </button>
+            )}
+            <div className="flex-1" />
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm font-medium text-[#6B7280] hover:bg-gray-50">
+              Close
+            </button>
+            <button type="button" onClick={handleSave} disabled={!name.trim() || saving} className="px-5 py-2.5 rounded-xl bg-[#7C3AED] text-white text-sm font-medium hover:bg-[#6D28D9] disabled:opacity-50 flex items-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+      {showGalleryPicker && (
+        <GalleryPickerModal onClose={() => setShowGalleryPicker(false)} onSelect={(item) => { setSelectedGalleryItem(item); setShowGalleryPicker(false) }} />
+      )}
+    </>
+  )
+}
+
 export default function ExercisesPage() {
   const [searchType, setSearchType] = useState<SearchType>("name")
   const [searchTerm, setSearchTerm] = useState("")
@@ -317,6 +534,7 @@ export default function ExercisesPage() {
   const [libraryLoading, setLibraryLoading] = useState(true)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<SavedExercise | null>(null)
 
   useEffect(() => {
     Promise.all([getBodyPartsEnglish(), getEquipmentListEnglish()]).then(
@@ -332,7 +550,7 @@ export default function ExercisesPage() {
       setLibraryLoading(true)
       const { data } = await getSupabase()
         .from("exercise_definitions")
-        .select("id, name, muscle_group, equipment, video_url, exercisedb_gif_url, exercisedb_image_url")
+        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url")
         .order("name")
       setMyLibrary((data as SavedExercise[]) ?? [])
       setLibraryLoading(false)
@@ -405,6 +623,7 @@ export default function ExercisesPage() {
           name: row.name,
           muscle_group: row.muscle_group,
           equipment: row.equipment,
+          description: row.description ?? null,
           video_url: row.video_url || null,
           exercisedb_gif_url: row.exercisedb_gif_url || null,
           exercisedb_image_url: row.exercisedb_image_url || null,
@@ -645,9 +864,11 @@ export default function ExercisesPage() {
               const mediaUrl =
                 ex.exercisedb_gif_url || ex.exercisedb_image_url || (ex.video_url && !ex.video_url.includes("youtube") && !ex.video_url.includes("vimeo") ? ex.video_url : null)
               return (
-                <div
+                <button
                   key={ex.id}
-                  className="rounded-xl border border-[#E8E5F0] bg-[#F8F7FF] overflow-hidden flex flex-col shadow-sm"
+                  type="button"
+                  onClick={() => setSelectedLibraryExercise(ex)}
+                  className="rounded-xl border border-[#E8E5F0] bg-[#F8F7FF] overflow-hidden flex flex-col shadow-sm text-left hover:border-[#7C3AED] hover:shadow-md transition-all"
                 >
                   <div className="aspect-square w-full min-h-[120px] bg-[#E8E5F0] overflow-hidden">
                     <ExerciseMedia
@@ -665,7 +886,7 @@ export default function ExercisesPage() {
                       {[ex.muscle_group, ex.equipment].filter(Boolean).join(" · ") || "—"}
                     </p>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -683,7 +904,21 @@ export default function ExercisesPage() {
         />
       )}
 
-      {/* Detail modal */}
+      {/* Library exercise: Detail + Edit dialog */}
+      {selectedLibraryExercise && (
+        <ExerciseDetailEditModal
+          exercise={selectedLibraryExercise}
+          onClose={() => setSelectedLibraryExercise(null)}
+          onUpdated={(updated) => {
+            setMyLibrary((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
+          }}
+          onDeleted={() => {
+            setMyLibrary((prev) => prev.filter((e) => e.id !== selectedLibraryExercise.id))
+          }}
+        />
+      )}
+
+      {/* Detail modal (search results) */}
       <AnimatePresence>
         {selectedExercise && (
           <div
