@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     template_name?: string
     workout_title?: string
     workout_description?: string
+    is_system_template?: boolean
     part_1_exercises?: unknown[]
     part_2_exercises?: unknown[]
     part_3_exercises?: unknown[]
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
     template_name: templateName,
     workout_title: workoutTitle,
     workout_description: workoutDescription,
+    is_system_template: body.is_system_template === true,
     part_1_exercises: body.part_1_exercises ?? [],
     part_2_exercises: body.part_2_exercises ?? [],
     part_3_exercises: body.part_3_exercises ?? [],

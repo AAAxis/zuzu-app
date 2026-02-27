@@ -52,6 +52,7 @@ interface WorkoutTemplateRow {
   template_name: string
   workout_title: string
   workout_description: string
+  is_system_template?: boolean
   part_1_exercises: WorkoutExercise[]
   part_2_exercises: WorkoutExercise[]
   part_3_exercises: WorkoutExercise[]
@@ -78,6 +79,7 @@ export default function TrainingBuilderPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedExerciseInfo, setSelectedExerciseInfo] = useState<ExerciseDef | null>(null)
   const [templateToDelete, setTemplateToDelete] = useState<WorkoutTemplateRow | null>(null)
+  const [isSystemTemplate, setIsSystemTemplate] = useState(false)
   const [videoModal, setVideoModal] = useState({ open: false, url: "", title: "" })
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState("")
@@ -165,6 +167,7 @@ export default function TrainingBuilderPage() {
       template_name: name,
       workout_title: name,
       workout_description: workoutDescription || "",
+      is_system_template: isSystemTemplate,
       part_1_exercises: workoutExercises.filter((e) => e.part === "part_1_exercises"),
       part_2_exercises: workoutExercises.filter((e) => e.part === "part_2_exercises"),
       part_3_exercises: workoutExercises.filter((e) => e.part === "part_3_exercises"),
@@ -196,6 +199,7 @@ export default function TrainingBuilderPage() {
             template_name: payload.template_name,
             workout_title: payload.workout_title,
             workout_description: payload.workout_description,
+            is_system_template: payload.is_system_template,
             part_1_exercises: payload.part_1_exercises,
             part_2_exercises: payload.part_2_exercises,
             part_3_exercises: payload.part_3_exercises,
@@ -217,6 +221,7 @@ export default function TrainingBuilderPage() {
   const loadTemplate = (t: WorkoutTemplateRow, forEdit = false) => {
     setWorkoutTitle(t.workout_title || "Custom workout")
     setWorkoutDescription(t.workout_description || "")
+    setIsSystemTemplate(t.is_system_template === true)
     const p1 = (t.part_1_exercises ?? []).map((e, i) => ({
       ...e,
       key: e.key || `p1-${Date.now()}-${i}`,
@@ -257,6 +262,7 @@ export default function TrainingBuilderPage() {
     setWorkoutTitle("Custom workout")
     setWorkoutDescription("")
     setWorkoutExercises([])
+    setIsSystemTemplate(false)
     setEditingTemplate(null)
   }
 
@@ -625,6 +631,15 @@ export default function TrainingBuilderPage() {
           <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
             <h2 className="text-lg font-bold text-[#1a1a2e] mb-4">Save template</h2>
             <p className="text-sm text-[#6B7280] mb-4">The workout title above is used as the template name.</p>
+            <label className="flex items-center gap-3 mb-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isSystemTemplate}
+                onChange={(e) => setIsSystemTemplate(e.target.checked)}
+                className="w-4 h-4 rounded border-[#E8E5F0] text-[#7C3AED] focus:ring-[#7C3AED]"
+              />
+              <span className="text-sm text-[#1a1a2e]">Use as example in app (visible to all users in Zuzu-fitness)</span>
+            </label>
             <button
               type="button"
               onClick={saveTemplate}
