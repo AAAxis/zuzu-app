@@ -303,7 +303,6 @@ export default function EnHome() {
               <Link href={`${base}/terms`} className="hover:text-[var(--primary)] transition-colors">{en.footerTerms}</Link>
               <Link href={`${base}/delete-data`} className="hover:text-[var(--primary)] transition-colors">{en.footerDeleteData}</Link>
               <Link href={`${base}/support`} className="hover:text-[var(--primary)] transition-colors">{en.footerSupport}</Link>
-              <LanguageSwitcher />
             </div>
             <p className="text-sm text-[var(--muted)]">{en.footerCopyright} <a href="https://holylabs.net" className="text-[var(--primary)] hover:underline font-medium">Holylabs</a></p>
           </div>

@@ -343,7 +343,6 @@ export default function Home() {
               <Link href="/terms" className="hover:text-[var(--primary)] transition-colors">{he.footerTerms}</Link>
               <Link href="/delete-data" className="hover:text-[var(--primary)] transition-colors">{he.footerDeleteData}</Link>
               <Link href="/support" className="hover:text-[var(--primary)] transition-colors">{he.footerSupport}</Link>
-              <LanguageSwitcher />
             </div>
             <p className="text-sm text-[var(--muted)]">{he.footerCopyright} <a href="https://holylabs.net" className="text-[var(--primary)] hover:underline font-medium">Holylabs</a></p>
           </div>
