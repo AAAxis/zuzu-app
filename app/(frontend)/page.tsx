@@ -19,6 +19,29 @@ interface BlogPost {
   category: string
   published_at: string
   read_time: number
+  translations?: {
+    he?: { title?: string; excerpt?: string }
+    en?: { title?: string; excerpt?: string }
+  }
+  original_language?: string
+}
+
+/** Post has Hebrew content (main or translation). */
+function hasHebrew(post: BlogPost): boolean {
+  if (post.original_language === "he") return true
+  const he = post.translations?.he
+  return !!(he?.title || he?.excerpt)
+}
+
+/** Get Hebrew title/excerpt for display. */
+function getHebrew(post: BlogPost): { title: string; excerpt: string } {
+  if (post.original_language === "he")
+    return { title: post.title || "", excerpt: post.excerpt || "" }
+  const he = post.translations?.he
+  return {
+    title: he?.title || post.title || "",
+    excerpt: he?.excerpt || post.excerpt || "",
+  }
 }
 
 const featureList = [
@@ -39,11 +62,14 @@ export default function Home() {
     async function fetchPosts() {
       const { data } = await getSupabase()
         .from("blog_posts")
-        .select("id, title, slug, excerpt, featured_image, category, published_at, read_time")
+        .select("id, title, slug, excerpt, featured_image, category, published_at, read_time, translations, original_language")
         .eq("status", "published")
         .order("published_at", { ascending: false })
-        .limit(6)
-      if (data) setPosts(data)
+        .limit(20)
+      if (data) {
+        // Hebrew site: only show posts that have Hebrew content
+        setPosts(data.filter(hasHebrew))
+      }
     }
     fetchPosts()
   }, [])
@@ -175,15 +201,15 @@ export default function Home() {
                   <div className="bg-white border border-[var(--border)] rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-purple-500/10 transition-all md:flex">
                     {posts[0].featured_image && (
                       <div className="relative md:w-1/2 aspect-video md:aspect-auto overflow-hidden">
-                        <Image src={posts[0].featured_image} alt={posts[0].title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <Image src={posts[0].featured_image} alt={getHebrew(posts[0]).title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                         {posts[0].category && (
                           <span className="absolute top-4 right-4 bg-[var(--primary)] text-white text-xs font-semibold px-3 py-1.5 rounded-full">{posts[0].category}</span>
                         )}
                       </div>
                     )}
                     <div className="p-8 md:w-1/2 flex flex-col justify-center">
-                      <h3 className="text-2xl md:text-3xl font-bold mb-3 group-hover:text-[var(--primary)] transition-colors">{posts[0].title}</h3>
-                      <p className="text-[var(--muted)] leading-relaxed mb-4 line-clamp-3">{posts[0].excerpt}</p>
+                      <h3 className="text-2xl md:text-3xl font-bold mb-3 group-hover:text-[var(--primary)] transition-colors">{getHebrew(posts[0]).title}</h3>
+                      <p className="text-[var(--muted)] leading-relaxed mb-4 line-clamp-3">{getHebrew(posts[0]).excerpt}</p>
                       <div className="flex items-center gap-4 text-sm text-[var(--muted)]">
                         {posts[0].published_at && <span>{new Date(posts[0].published_at).toLocaleDateString("he-IL", { month: "short", day: "numeric", year: "numeric" })}</span>}
                         {posts[0].read_time && <span>· {posts[0].read_time} {he.minRead}</span>}
@@ -196,21 +222,23 @@ export default function Home() {
                 </Link>
               </motion.div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                {posts.slice(1, 7).map((post, i) => (
+                {posts.slice(1, 7).map((post, i) => {
+                  const { title: heTitle, excerpt: heExcerpt } = getHebrew(post)
+                  return (
                   <motion.div key={post.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
                     <Link href={`/blog/${post.slug}`} className="group block h-full">
                       <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-purple-500/5 hover:border-purple-200 transition-all h-full flex flex-col">
                         {post.featured_image && (
                           <div className="relative aspect-[16/10] overflow-hidden">
-                            <Image src={post.featured_image} alt={post.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <Image src={post.featured_image} alt={heTitle} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                             {post.category && (
                               <span className="absolute top-3 right-3 bg-[var(--primary)] text-white text-xs font-semibold px-2.5 py-1 rounded-full">{post.category}</span>
                             )}
                           </div>
                         )}
                         <div className="p-5 flex flex-col flex-1">
-                          <h3 className="text-lg font-bold mb-2 group-hover:text-[var(--primary)] transition-colors line-clamp-2">{post.title}</h3>
-                          <p className="text-sm text-[var(--muted)] line-clamp-2 mb-3 flex-1">{post.excerpt}</p>
+                          <h3 className="text-lg font-bold mb-2 group-hover:text-[var(--primary)] transition-colors line-clamp-2">{heTitle}</h3>
+                          <p className="text-sm text-[var(--muted)] line-clamp-2 mb-3 flex-1">{heExcerpt}</p>
                           <div className="flex items-center justify-between text-xs text-[var(--muted)]">
                             <span>{post.published_at && new Date(post.published_at).toLocaleDateString("he-IL", { month: "short", day: "numeric" })}</span>
                             <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {post.read_time} דק׳</span>
@@ -219,7 +247,7 @@ export default function Home() {
                       </div>
                     </Link>
                   </motion.div>
-                ))}
+                )})}
               </div>
               <div className="text-center">
                 <Link href="/blog" className="inline-flex items-center gap-2 bg-[var(--light)] text-[var(--primary)] px-8 py-3.5 rounded-full font-semibold hover:bg-[var(--primary)] hover:text-white transition-all">

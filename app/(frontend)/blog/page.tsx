@@ -31,6 +31,13 @@ function getField(post: BlogPost, field: "title" | "excerpt", lang: Lang): strin
   return post[field] || ""
 }
 
+/** Post has Hebrew content (main or translation). */
+function hasHebrew(post: BlogPost): boolean {
+  if (post.original_language === "he") return true
+  const he = post.translations?.he
+  return !!(he?.title || he?.excerpt)
+}
+
 export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,7 +53,7 @@ export default function BlogPage() {
         .eq("status", "published")
         .order("published_at", { ascending: false })
 
-      if (!error && data) setPosts(data)
+      if (!error && data) setPosts(data.filter(hasHebrew))
       setLoading(false)
     }
     fetchPosts()
@@ -113,7 +120,7 @@ export default function BlogPage() {
               const displayTitle = getField(post, "title", lang)
               const displayExcerpt = getField(post, "excerpt", lang)
               return (
-                <Link key={post.id} href={`/blog/${post.slug}?lang=${lang}`} className="group">
+                <Link key={post.id} href={`/blog/${post.slug}`} className="group">
                   <div className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:border-[var(--primary)] hover:shadow-lg transition-all">
                     {post.featured_image && (
                       <div className="relative aspect-video overflow-hidden">
