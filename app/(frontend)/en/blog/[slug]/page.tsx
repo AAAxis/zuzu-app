@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useSearchParams } from "next/navigation"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { getSupabase } from "@/lib/supabase"
 import { Dumbbell } from "lucide-react"
-import { he } from "@/lib/messages-he"
+import { en } from "@/lib/messages-en"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 
 interface BlogPost {
@@ -28,27 +28,17 @@ interface BlogPost {
   original_language?: string
 }
 
-type Lang = "en" | "he"
-
-function getField(post: BlogPost, field: "title" | "excerpt" | "content", lang: Lang): string {
-  if (lang === "he" && post.translations?.he?.[field]) return post.translations.he[field]!
+function getField(post: BlogPost, field: "title" | "excerpt" | "content", lang: "en"): string {
   if (lang === "en" && post.translations?.en?.[field]) return post.translations.en[field]!
   return post[field] || ""
 }
 
-export default function BlogPostPage() {
+const base = "/en"
+
+export default function EnBlogPostPage() {
   const params = useParams()
-  const searchParams = useSearchParams()
   const [post, setPost] = useState<BlogPost | null>(null)
   const [loading, setLoading] = useState(true)
-  const [lang, setLang] = useState<Lang>("he")
-
-  useEffect(() => {
-    const urlLang = searchParams.get("lang")
-    if (urlLang === "he" || urlLang === "en") {
-      setLang(urlLang)
-    }
-  }, [searchParams])
 
   useEffect(() => {
     async function fetchPost() {
@@ -67,15 +57,15 @@ export default function BlogPostPage() {
   const header = (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-[var(--border)]">
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href={base} className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center">
             <Dumbbell className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold">ZUZU</span>
         </Link>
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm text-[var(--muted)] hover:text-black transition-colors">{he.navHome}</Link>
-          <Link href="/blog" className="text-sm text-[var(--muted)] hover:text-black transition-colors">{he.blogPageTitle}</Link>
+          <Link href={base} className="text-sm text-[var(--muted)] hover:text-black transition-colors">{en.navHome}</Link>
+          <Link href={`${base}/blog`} className="text-sm text-[var(--muted)] hover:text-black transition-colors">{en.blogPageTitle}</Link>
           <LanguageSwitcher />
         </div>
       </nav>
@@ -88,7 +78,7 @@ export default function BlogPostPage() {
         {header}
         <main className="min-h-screen bg-white">
           <div className="pt-28 pb-16 max-w-3xl mx-auto px-6">
-            <p className="text-[var(--muted)]">{he.loading}</p>
+            <p className="text-[var(--muted)]">{en.loading}</p>
           </div>
         </main>
       </>
@@ -101,30 +91,27 @@ export default function BlogPostPage() {
         {header}
         <main className="min-h-screen bg-white">
           <div className="pt-28 pb-16 max-w-3xl mx-auto px-6 text-center">
-            <h1 className="text-3xl font-bold mb-4">{he.postNotFound}</h1>
-            <Link href="/blog" className="text-[var(--primary)] hover:underline">{he.backToBlog}</Link>
+            <h1 className="text-3xl font-bold mb-4">{en.postNotFound}</h1>
+            <Link href={`${base}/blog`} className="text-[var(--primary)] hover:underline">{en.backToBlog}</Link>
           </div>
         </main>
       </>
     )
   }
 
-  const displayTitle = getField(post, "title", lang)
-  const displayContent = getField(post, "content", lang)
+  const displayTitle = getField(post, "title", "en")
+  const displayContent = getField(post, "content", "en")
 
   return (
     <>
       {header}
       <main className="min-h-screen bg-white">
         <article className="pt-28 pb-16 max-w-3xl mx-auto px-6">
-          <Link
-            href="/blog"
-            className="text-sm text-[var(--muted)] hover:text-[var(--primary)] transition-colors mb-6 inline-block"
-          >
-            {he.backToBlog}
+          <Link href={`${base}/blog`} className="text-sm text-[var(--muted)] hover:text-[var(--primary)] transition-colors mb-6 inline-block">
+            {en.backToBlog}
           </Link>
           {post.category && (
-            <span className="inline-block bg-[var(--primary)] text-white text-xs font-medium px-3 py-1 rounded-full mb-4 mx-2">
+            <span className="inline-block bg-[var(--primary)] text-white text-xs font-medium px-3 py-1 rounded-full mb-4 ml-2">
               {post.category}
             </span>
           )}
@@ -132,43 +119,22 @@ export default function BlogPostPage() {
             {displayTitle}
           </h1>
           <div className="flex items-center gap-4 text-sm text-[var(--muted)] mb-8">
-            {post.author && (
-              <span>{he.by} {post.author}</span>
-            )}
+            {post.author && <span>{en.by} {post.author}</span>}
             {post.published_at && (
-              <span>
-                {new Date(post.published_at).toLocaleDateString("he-IL", { year: "numeric", month: "long", day: "numeric" })}
-              </span>
+              <span>{new Date(post.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
             )}
-            {post.read_time && (
-              <span>
-                {post.read_time} {he.minRead}
-              </span>
-            )}
+            {post.read_time && <span>{post.read_time} {en.minRead}</span>}
           </div>
           {post.featured_image && (
             <div className="relative aspect-video rounded-2xl overflow-hidden mb-10">
-              <Image
-                src={post.featured_image}
-                alt={displayTitle}
-                fill
-                className="object-cover"
-              />
+              <Image src={post.featured_image} alt={displayTitle} fill className="object-cover" />
             </div>
           )}
-          <div
-            className="prose prose-lg max-w-none"
-            dangerouslySetInnerHTML={{ __html: displayContent }}
-          />
+          <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: displayContent }} />
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-[var(--border)]">
               {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 rounded-full bg-[var(--light)] text-xs text-[var(--muted)]"
-                >
-                  #{tag}
-                </span>
+                <span key={tag} className="px-3 py-1 rounded-full bg-[var(--light)] text-xs text-[var(--muted)]">#{tag}</span>
               ))}
             </div>
           )}

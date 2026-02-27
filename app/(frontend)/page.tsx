@@ -7,6 +7,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { getSupabase } from "@/lib/supabase"
 import { he } from "@/lib/messages-he"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 
 const fadeUp = { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } }
 
@@ -90,9 +91,12 @@ export default function Home() {
             <Link href="#blog" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">{he.navBlog}</Link>
             <Link href="#pricing" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">{he.navPricing}</Link>
           </div>
-          <Link href="#download" className="bg-[var(--primary)] text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Link href="#download" className="bg-[var(--primary)] text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity">
             {he.navGetApp}
           </Link>
+          </div>
         </nav>
       </header>
 
@@ -339,6 +343,7 @@ export default function Home() {
               <Link href="/terms" className="hover:text-[var(--primary)] transition-colors">{he.footerTerms}</Link>
               <Link href="/delete-data" className="hover:text-[var(--primary)] transition-colors">{he.footerDeleteData}</Link>
               <Link href="/support" className="hover:text-[var(--primary)] transition-colors">{he.footerSupport}</Link>
+              <LanguageSwitcher />
             </div>
             <p className="text-sm text-[var(--muted)]">{he.footerCopyright} <a href="https://holylabs.net" className="text-[var(--primary)] hover:underline font-medium">Holylabs</a></p>
           </div>

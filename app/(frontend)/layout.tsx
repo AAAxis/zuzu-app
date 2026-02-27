@@ -1,20 +1,33 @@
 "use client"
 
 import { useEffect } from "react"
+import { usePathname } from "next/navigation"
 
 export default function FrontendLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname() ?? ""
+  const isEn = pathname.startsWith("/en")
+
   useEffect(() => {
-    document.documentElement.setAttribute("dir", "rtl")
-    document.documentElement.setAttribute("lang", "he")
+    if (isEn) {
+      document.documentElement.setAttribute("dir", "ltr")
+      document.documentElement.setAttribute("lang", "en")
+    } else {
+      document.documentElement.setAttribute("dir", "rtl")
+      document.documentElement.setAttribute("lang", "he")
+    }
     return () => {
       document.documentElement.setAttribute("dir", "ltr")
       document.documentElement.setAttribute("lang", "en")
     }
-  }, [])
+  }, [isEn])
 
-  return <div dir="rtl" className="min-h-screen">{children}</div>
+  return (
+    <div dir={isEn ? "ltr" : "rtl"} className="min-h-screen">
+      {children}
+    </div>
+  )
 }

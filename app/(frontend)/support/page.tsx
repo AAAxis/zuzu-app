@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { he } from "@/lib/messages-he"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { Loader2, CheckCircle } from "lucide-react"
 
 export default function SupportPage() {
@@ -47,9 +48,12 @@ export default function SupportPage() {
   return (
     <main className="min-h-screen bg-white" dir="rtl">
       <div className="max-w-3xl mx-auto px-6 py-20">
-        <Link href="/" className="text-sm text-[var(--primary)] hover:underline mb-8 inline-block">
-          {he.backToZuzu}
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="text-sm text-[var(--primary)] hover:underline inline-block">
+            {he.backToZuzu}
+          </Link>
+          <LanguageSwitcher />
+        </div>
         <h1 className="text-4xl font-bold mb-4">{he.supportTitle}</h1>
         <p className="text-[var(--muted)] mb-10">{he.supportSubtitle}</p>
 

@@ -1,11 +1,15 @@
 import Link from "next/link"
 import { he } from "@/lib/messages-he"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 
 export default function Privacy() {
   return (
     <main className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-20">
-        <Link href="/" className="text-sm text-[var(--primary)] hover:underline mb-8 inline-block">{he.backToZuzu}</Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="text-sm text-[var(--primary)] hover:underline inline-block">{he.backToZuzu}</Link>
+          <LanguageSwitcher />
+        </div>
         <h1 className="text-4xl font-bold mb-8">{he.privacyTitle}</h1>
         <div className="prose prose-gray max-w-none space-y-6 text-[var(--muted)]">
           <p><strong>{he.lastUpdated}</strong> פברואר 2026</p>

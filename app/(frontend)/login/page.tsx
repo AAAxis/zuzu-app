@@ -6,6 +6,7 @@ import { Dumbbell, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { he } from "@/lib/messages-he"
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 
 type View = "login" | "forgot-password"
 
@@ -230,13 +231,14 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[var(--light)] to-white flex items-center justify-center px-6">
       <div className="max-w-sm w-full">
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center flex flex-col items-center gap-2">
           <Link href="/" className="inline-flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center">
               <Dumbbell className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold">ZUZU</span>
           </Link>
+          <LanguageSwitcher />
         </div>
         <Suspense fallback={
           <div className="bg-white border border-[var(--border)] rounded-3xl p-8 shadow-lg text-center">
