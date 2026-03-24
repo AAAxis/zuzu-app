@@ -541,8 +541,8 @@ function ExerciseDetailEditModal({
 
             {/* Hebrew translations toggle */}
             <div className="border-t border-[#E8E5F0] pt-4">
-              <button type="button" onClick={() => setShowHebrew(!showHebrew)} className="flex items-center gap-2 text-sm font-medium text-[#7C3AED] hover:underline">
-                {showHebrew ? "Hide" : "Edit"} Hebrew translations
+              <button type="button" onClick={() => setShowHebrew(!showHebrew)} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#7C3AED] text-[#7C3AED] text-sm font-medium hover:bg-[#F8F7FF] transition-colors">
+                {showHebrew ? "▲ Hide Hebrew" : "עב Edit Hebrew translations"}
               </button>
               {showHebrew && (
                 <div className="mt-3 space-y-3 bg-[#F8F7FF] rounded-xl p-4 border border-[#E8E5F0]">
