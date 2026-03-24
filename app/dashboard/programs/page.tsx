@@ -454,15 +454,6 @@ export default function ProgramsPage() {
           {/* Save section */}
           <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
             <h2 className="text-lg font-bold text-[#1a1a2e] mb-4">Save program</h2>
-            <label className="flex items-center gap-3 mb-4 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isSystemProgram}
-                onChange={(e) => setIsSystemProgram(e.target.checked)}
-                className="w-4 h-4 rounded border-[#E8E5F0] text-[#7C3AED] focus:ring-[#7C3AED]"
-              />
-              <span className="text-sm text-[#1a1a2e]">Use as example in app (visible to all users)</span>
-            </label>
             <button
               type="button"
               onClick={saveProgram}
