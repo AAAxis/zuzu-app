@@ -69,7 +69,7 @@ export default function ProgramsPage() {
   const [thumbnailUploading, setThumbnailUploading] = useState(false)
   const [gender, setGender] = useState("unisex")
   const [location, setLocation] = useState("gym")
-  const [isSystemProgram, setIsSystemProgram] = useState(false)
+  const isSystemProgram = false
   const [days, setDays] = useState<ProgramDay[]>([
     { day_number: 1, type: "workout", workout_template_id: null, label: "Day 1" },
   ])
@@ -211,7 +211,7 @@ export default function ProgramsPage() {
     setThumbnailUrl(p.thumbnail_url)
     setGender(p.gender || "unisex")
     setLocation(p.location || "gym")
-    setIsSystemProgram(p.is_system_program)
+    // is_system_program removed from UI
     setDays(p.days?.length ? p.days : [{ day_number: 1, type: "workout", workout_template_id: null, label: "Day 1" }])
     setNameHe(p.translations?.he?.name || p.name_he || "")
     setDescriptionHe(p.translations?.he?.description || p.description_he || "")
@@ -242,7 +242,7 @@ export default function ProgramsPage() {
     setThumbnailUrl(null)
     setGender("unisex")
     setLocation("gym")
-    setIsSystemProgram(false)
+    // is_system_program removed from UI
     setNameHe("")
     setDescriptionHe("")
     setDays([{ day_number: 1, type: "workout", workout_template_id: null, label: "Day 1" }])

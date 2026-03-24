@@ -18,6 +18,7 @@ import {
   Play,
   Trash2,
   Pencil,
+  Sparkles,
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import {
@@ -88,6 +89,35 @@ function CreateExerciseModal({
   const [muscleGroupHe, setMuscleGroupHe] = useState("")
   const [equipmentHe, setEquipmentHe] = useState("")
   const [lang, setLang] = useState<"en" | "he">("en")
+  const [aiLoading, setAiLoading] = useState(false)
+
+  async function handleAiFill() {
+    if (!name.trim()) return
+    setAiLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/exercises/ai-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || res.statusText)
+      if (data.name) setName(data.name)
+      if (data.muscle_group) setMuscleGroup(data.muscle_group)
+      if (data.equipment) setEquipment(data.equipment)
+      if (data.category) setCategory(data.category)
+      if (data.description) setDescription(data.description)
+      if (data.name_he) setNameHe(data.name_he)
+      if (data.description_he) setDescriptionHe(data.description_he)
+      if (data.muscle_group_he) setMuscleGroupHe(data.muscle_group_he)
+      if (data.equipment_he) setEquipmentHe(data.equipment_he)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI autofill failed")
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   async function handleSave() {
     if (!name.trim()) return
@@ -180,10 +210,10 @@ function CreateExerciseModal({
           {/* EN / HE tabs */}
           <div className="flex rounded-xl border border-[#E8E5F0] overflow-hidden mb-5">
             <button type="button" onClick={() => setLang("en")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "en" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
-              EN English
+              English
             </button>
             <button type="button" onClick={() => setLang("he")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "he" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
-              עב Hebrew
+              Hebrew
             </button>
           </div>
 
@@ -192,7 +222,19 @@ function CreateExerciseModal({
               <>
                 <div>
                   <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Exercise Name <span className="text-red-400">*</span></label>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bulgarian Split Squat" className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]" />
+                  <div className="flex gap-2">
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bulgarian Split Squat" className="flex-1 px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]" />
+                    <button
+                      type="button"
+                      onClick={handleAiFill}
+                      disabled={!name.trim() || aiLoading}
+                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#6D28D9] text-white text-xs font-medium hover:opacity-90 disabled:opacity-40 whitespace-nowrap shrink-0"
+                      title="Autofill all fields with AI"
+                    >
+                      {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      AI Fill
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -523,10 +565,10 @@ function ExerciseDetailEditModal({
             {/* EN / HE tabs */}
             <div className="flex rounded-xl border border-[#E8E5F0] overflow-hidden">
               <button type="button" onClick={() => setLang("en")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "en" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
-                EN English
+                English
               </button>
               <button type="button" onClick={() => setLang("he")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "he" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
-                עב Hebrew
+                Hebrew
               </button>
             </div>
 
