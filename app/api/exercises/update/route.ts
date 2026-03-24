@@ -46,6 +46,9 @@ export async function PATCH(request: Request) {
     exercisedb_id?: string | null
     exercisedb_image_url?: string | null
     exercisedb_gif_url?: string | null
+    easier_alternatives?: string[]
+    harder_alternatives?: string[]
+    equipment_alternatives?: string[]
   }
   try {
     body = await request.json()
@@ -82,6 +85,7 @@ export async function PATCH(request: Request) {
 
   const updates: Record<string, unknown> = {
     name,
+    name_he: he.name || name,
     muscle_group: body.muscle_group ?? null,
     category: body.category ?? null,
     equipment: body.equipment ?? null,
@@ -90,6 +94,9 @@ export async function PATCH(request: Request) {
     exercisedb_id: body.exercisedb_id ?? null,
     exercisedb_image_url: body.exercisedb_image_url ?? null,
     exercisedb_gif_url: body.exercisedb_gif_url ?? null,
+    easier_alternatives: body.easier_alternatives ?? [],
+    harder_alternatives: body.harder_alternatives ?? [],
+    equipment_alternatives: body.equipment_alternatives ?? [],
     translations: {
       he: {
         name: he.name || name,

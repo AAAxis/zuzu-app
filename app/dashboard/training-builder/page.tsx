@@ -15,6 +15,10 @@ import {
   ClipboardList,
   X,
   Sparkles,
+  ImagePlus,
+  Upload,
+  MapPin,
+  Users,
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
@@ -53,6 +57,9 @@ interface WorkoutTemplateRow {
   workout_title: string
   workout_description: string
   is_system_template?: boolean
+  thumbnail_url?: string | null
+  gender?: string
+  location?: string
   part_1_exercises: WorkoutExercise[]
   part_2_exercises: WorkoutExercise[]
   part_3_exercises: WorkoutExercise[]
@@ -85,6 +92,12 @@ export default function TrainingBuilderPage() {
   const [aiPrompt, setAiPrompt] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
+  const [thumbnailUploading, setThumbnailUploading] = useState(false)
+  const [gender, setGender] = useState("unisex")
+  const [location, setLocation] = useState("gym")
+  const [filterMuscle, setFilterMuscle] = useState("")
+  const [filterEquipment, setFilterEquipment] = useState("")
 
   useEffect(() => {
     async function load() {
@@ -142,9 +155,15 @@ export default function TrainingBuilderPage() {
       const nameMatch = ex.name.toLowerCase().includes(term)
       const heName = ex.translations?.he?.name?.toLowerCase().includes(term)
       const muscleMatch = (ex.muscle_group?.toLowerCase().includes(term) ?? false)
-      return nameMatch || heName || muscleMatch
+      const textMatch = nameMatch || heName || muscleMatch
+      const muscleFilter = !filterMuscle || ex.muscle_group === filterMuscle
+      const equipFilter = !filterEquipment || ex.equipment === filterEquipment
+      return textMatch && muscleFilter && equipFilter
     }
   )
+
+  const allMuscleGroups = [...new Set(exerciseDefinitions.map((e) => e.muscle_group).filter(Boolean))] as string[]
+  const allEquipment = [...new Set(exerciseDefinitions.map((e) => e.equipment).filter(Boolean))] as string[]
 
   const saveTemplate = async () => {
     const name = workoutTitle.trim()
@@ -168,6 +187,9 @@ export default function TrainingBuilderPage() {
       workout_title: name,
       workout_description: workoutDescription || "",
       is_system_template: isSystemTemplate,
+      thumbnail_url: thumbnailUrl,
+      gender,
+      location,
       part_1_exercises: workoutExercises.filter((e) => e.part === "part_1_exercises"),
       part_2_exercises: workoutExercises.filter((e) => e.part === "part_2_exercises"),
       part_3_exercises: workoutExercises.filter((e) => e.part === "part_3_exercises"),
@@ -222,6 +244,9 @@ export default function TrainingBuilderPage() {
     setWorkoutTitle(t.workout_title || "Custom workout")
     setWorkoutDescription(t.workout_description || "")
     setIsSystemTemplate(t.is_system_template === true)
+    setThumbnailUrl(t.thumbnail_url ?? null)
+    setGender(t.gender || "unisex")
+    setLocation(t.location || "gym")
     const p1 = (t.part_1_exercises ?? []).map((e, i) => ({
       ...e,
       key: e.key || `p1-${Date.now()}-${i}`,
@@ -263,6 +288,9 @@ export default function TrainingBuilderPage() {
     setWorkoutDescription("")
     setWorkoutExercises([])
     setIsSystemTemplate(false)
+    setThumbnailUrl(null)
+    setGender("unisex")
+    setLocation("gym")
     setEditingTemplate(null)
   }
 
@@ -384,8 +412,66 @@ export default function TrainingBuilderPage() {
               value={workoutDescription}
               onChange={(e) => setWorkoutDescription(e.target.value)}
               rows={2}
-              className="w-full rounded-xl border border-[#E8E5F0] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none"
+              className="w-full rounded-xl border border-[#E8E5F0] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none mb-3"
             />
+
+            {/* Thumbnail */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-[#6B7280] mb-1">Thumbnail image</label>
+              {thumbnailUrl ? (
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-[#E8E5F0] bg-[#F8F7FF]">
+                  <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => setThumbnailUrl(null)} className="absolute top-2 right-2 p-1 bg-white/80 rounded-lg hover:bg-white">
+                    <X className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              ) : (
+                <label className="w-full py-3 rounded-xl border-2 border-dashed border-[#E8E5F0] text-[#6B7280] text-sm hover:border-[#7C3AED] hover:text-[#7C3AED] flex items-center justify-center gap-2 cursor-pointer">
+                  {thumbnailUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                  {thumbnailUploading ? "Uploading..." : "Upload thumbnail"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      setThumbnailUploading(true)
+                      try {
+                        const formData = new FormData()
+                        formData.append("file", file)
+                        formData.append("title", workoutTitle || "workout-thumbnail")
+                        formData.append("category", "Thumbnail")
+                        const res = await fetch("/api/gallery/upload", { method: "POST", body: formData })
+                        const data = await res.json()
+                        if (data.url) setThumbnailUrl(data.url)
+                      } catch { /* ignore */ }
+                      setThumbnailUploading(false)
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Gender & Location */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-[#6B7280] mb-1"><Users className="w-3 h-3 inline mr-1" />Gender</label>
+                <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full rounded-xl border border-[#E8E5F0] px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]">
+                  <option value="unisex">Unisex</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#6B7280] mb-1"><MapPin className="w-3 h-3 inline mr-1" />Location</label>
+                <select value={location} onChange={(e) => setLocation(e.target.value)} className="w-full rounded-xl border border-[#E8E5F0] px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]">
+                  <option value="gym">Gym</option>
+                  <option value="home">Home</option>
+                </select>
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={() => { setAiError(null); setAiPrompt(""); setAiModalOpen(true) }}
@@ -408,9 +494,19 @@ export default function TrainingBuilderPage() {
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]"
               />
             </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <select value={filterMuscle} onChange={(e) => setFilterMuscle(e.target.value)} className="rounded-lg border border-[#E8E5F0] px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]">
+                <option value="">All muscles</option>
+                {allMuscleGroups.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
+              </select>
+              <select value={filterEquipment} onChange={(e) => setFilterEquipment(e.target.value)} className="rounded-lg border border-[#E8E5F0] px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]">
+                <option value="">All equipment</option>
+                {allEquipment.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+              </select>
+            </div>
             <p className="text-xs text-[#6B7280] mb-2">
               {exerciseDefinitions.length} exercises available
-              {searchTerm && ` (${filteredExercises.length} matching)`}
+              {(searchTerm || filterMuscle || filterEquipment) && ` (${filteredExercises.length} matching)`}
             </p>
             <div className="h-[360px] overflow-y-auto border border-[#E8E5F0] rounded-xl bg-[#F8F7FF]">
               <div className="p-2 space-y-1">

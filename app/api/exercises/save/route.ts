@@ -49,6 +49,9 @@ export async function POST(request: Request) {
     exercisedb_secondary_muscles?: string[]
     exercisedb_variations?: string[]
     exercisedb_related_exercises?: string[]
+    easier_alternatives?: string[]
+    harder_alternatives?: string[]
+    equipment_alternatives?: string[]
   }
   try {
     body = await request.json()
@@ -90,6 +93,9 @@ export async function POST(request: Request) {
     exercisedb_secondary_muscles: body.exercisedb_secondary_muscles ?? [],
     exercisedb_variations: body.exercisedb_variations ?? [],
     exercisedb_related_exercises: body.exercisedb_related_exercises ?? [],
+    easier_alternatives: body.easier_alternatives ?? [],
+    harder_alternatives: body.harder_alternatives ?? [],
+    equipment_alternatives: body.equipment_alternatives ?? [],
     translations: {
       he: {
         name: he.name || name,

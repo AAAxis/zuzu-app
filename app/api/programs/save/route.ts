@@ -37,17 +37,13 @@ export async function POST(request: Request) {
 
   let body: {
     id?: string
-    created_by?: string
-    template_name?: string
-    workout_title?: string
-    workout_description?: string
-    is_system_template?: boolean
+    name?: string
+    description?: string
     thumbnail_url?: string | null
     gender?: string
     location?: string
-    part_1_exercises?: unknown[]
-    part_2_exercises?: unknown[]
-    part_3_exercises?: unknown[]
+    is_system_program?: boolean
+    days?: unknown[]
   }
   try {
     body = await request.json()
@@ -55,43 +51,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const templateName = body.template_name?.trim()
-  if (!templateName) {
-    return NextResponse.json(
-      { error: "template_name is required" },
-      { status: 400 }
-    )
+  const name = body.name?.trim()
+  if (!name) {
+    return NextResponse.json({ error: "name is required" }, { status: 400 })
   }
 
-  const workoutTitle = body.workout_title?.trim() || templateName
-  const workoutDescription = body.workout_description ?? ""
+  const description = body.description ?? ""
 
   const he = await translateManyToHebrew([
-    { key: "template_name", text: templateName },
-    { key: "workout_title", text: workoutTitle },
-    { key: "workout_description", text: workoutDescription },
+    { key: "name", text: name },
+    { key: "description", text: description },
   ])
 
-  const now = new Date().toISOString()
   const basePayload = {
-    created_by: body.created_by ?? user.email,
-    template_name: templateName,
-    workout_title: workoutTitle,
-    workout_description: workoutDescription,
-    is_system_template: body.is_system_template === true,
+    name,
+    name_he: he.name || name,
+    description,
+    description_he: he.description || description,
     thumbnail_url: body.thumbnail_url ?? null,
     gender: body.gender || "unisex",
     location: body.location || "gym",
-    part_1_exercises: body.part_1_exercises ?? [],
-    part_2_exercises: body.part_2_exercises ?? [],
-    part_3_exercises: body.part_3_exercises ?? [],
+    is_system_program: body.is_system_program === true,
+    days: body.days ?? [],
+    created_by: user.email,
     translations: {
       he: {
-        template_name: he.template_name || templateName,
-        workout_title: he.workout_title || workoutTitle,
-        workout_description: he.workout_description || workoutDescription,
+        name: he.name || name,
+        description: he.description || description,
       },
     },
+    updated_at: new Date().toISOString(),
   }
 
   const adminClient = createClient(supabaseUrl, serviceKey, {
@@ -100,7 +89,7 @@ export async function POST(request: Request) {
 
   if (body.id) {
     const { error } = await adminClient
-      .from("workout_templates")
+      .from("workout_programs")
       .update(basePayload)
       .eq("id", body.id)
     if (error) {
@@ -110,8 +99,8 @@ export async function POST(request: Request) {
   }
 
   const { data, error } = await adminClient
-    .from("workout_templates")
-    .insert({ ...basePayload, created_date: now })
+    .from("workout_programs")
+    .insert(basePayload)
     .select("id")
     .single()
 

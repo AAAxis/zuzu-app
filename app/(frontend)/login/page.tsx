@@ -6,7 +6,6 @@ import { Dumbbell, Mail, Lock, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { he } from "@/lib/messages-he"
-import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 
 type View = "login" | "forgot-password"
 
@@ -238,7 +237,6 @@ export default function LoginPage() {
             </div>
             <span className="text-2xl font-bold">ZUZU</span>
           </Link>
-          <LanguageSwitcher />
         </div>
         <Suspense fallback={
           <div className="bg-white border border-[var(--border)] rounded-3xl p-8 shadow-lg text-center">

@@ -51,6 +51,9 @@ interface SavedExercise {
   exercisedb_gif_url: string | null
   exercisedb_image_url: string | null
   translations?: { he?: { name?: string; description?: string; muscle_group?: string; equipment?: string } } | null
+  easier_alternatives?: string[]
+  harder_alternatives?: string[]
+  equipment_alternatives?: string[]
 }
 
 /* ───────── YouTube/Vimeo thumbnail helper ───────── */
@@ -314,13 +317,85 @@ function GalleryPickerModal({ onClose, onSelect }: { onClose: () => void; onSele
 }
 
 /* ───────── Exercise Detail + Edit Modal (for My Library) ───────── */
+function AlternativesPicker({
+  label,
+  selected,
+  onChange,
+  allExercises,
+  currentId,
+}: {
+  label: string
+  selected: string[]
+  onChange: (ids: string[]) => void
+  allExercises: SavedExercise[]
+  currentId: string
+}) {
+  const [query, setQuery] = useState("")
+  const [open, setOpen] = useState(false)
+  const available = allExercises.filter(
+    (ex) => ex.id !== currentId && !selected.includes(ex.id) && (query === "" || getDisplayName(ex, DEFAULT_LOCALE).toLowerCase().includes(query.toLowerCase()))
+  )
+  return (
+    <div>
+      <label className="block text-sm font-medium text-[#1a1a2e] mb-1">{label}</label>
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selected.map((id) => {
+            const ex = allExercises.find((e) => e.id === id)
+            return (
+              <span key={id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F8F7FF] border border-[#E8E5F0] text-xs">
+                {ex ? getDisplayName(ex, DEFAULT_LOCALE) : id.slice(0, 8)}
+                <button type="button" onClick={() => onChange(selected.filter((s) => s !== id))} className="text-red-400 hover:text-red-600">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )
+          })}
+        </div>
+      )}
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="w-full py-2 rounded-xl border-2 border-dashed border-[#E8E5F0] text-[#6B7280] text-xs hover:border-[#7C3AED] hover:text-[#7C3AED] flex items-center justify-center gap-1">
+          <Plus className="w-3.5 h-3.5" /> Add
+        </button>
+      ) : (
+        <div className="border border-[#E8E5F0] rounded-xl overflow-hidden">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search exercises..."
+            autoFocus
+            className="w-full px-3 py-2 text-xs border-b border-[#E8E5F0] focus:outline-none"
+          />
+          <div className="max-h-32 overflow-y-auto">
+            {available.slice(0, 20).map((ex) => (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => { onChange([...selected, ex.id]); setQuery(""); setOpen(false) }}
+                className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#F8F7FF] truncate"
+              >
+                {getDisplayName(ex, DEFAULT_LOCALE)}
+              </button>
+            ))}
+            {available.length === 0 && <p className="px-3 py-2 text-xs text-[#6B7280]">No exercises found</p>}
+          </div>
+          <button type="button" onClick={() => { setOpen(false); setQuery("") }} className="w-full px-3 py-1.5 text-xs text-[#6B7280] border-t border-[#E8E5F0] hover:bg-gray-50">Cancel</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ExerciseDetailEditModal({
   exercise,
+  allExercises,
   onClose,
   onUpdated,
   onDeleted,
 }: {
   exercise: SavedExercise
+  allExercises: SavedExercise[]
   onClose: () => void
   onUpdated: (updated: SavedExercise) => void
   onDeleted?: () => void
@@ -329,6 +404,9 @@ function ExerciseDetailEditModal({
   const [muscleGroup, setMuscleGroup] = useState(exercise.muscle_group ?? "")
   const [equipment, setEquipment] = useState(exercise.equipment ?? "")
   const [description, setDescription] = useState(exercise.description ?? "")
+  const [easierAlts, setEasierAlts] = useState<string[]>(exercise.easier_alternatives ?? [])
+  const [harderAlts, setHarderAlts] = useState<string[]>(exercise.harder_alternatives ?? [])
+  const [equipmentAlts, setEquipmentAlts] = useState<string[]>(exercise.equipment_alternatives ?? [])
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState("")
@@ -365,6 +443,9 @@ function ExerciseDetailEditModal({
           video_url: finalVideoUrl,
           exercisedb_image_url: finalImageUrl,
           exercisedb_gif_url: finalImageUrl,
+          easier_alternatives: easierAlts,
+          harder_alternatives: harderAlts,
+          equipment_alternatives: equipmentAlts,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -378,6 +459,9 @@ function ExerciseDetailEditModal({
         video_url: finalVideoUrl,
         exercisedb_image_url: finalImageUrl,
         exercisedb_gif_url: finalImageUrl,
+        easier_alternatives: easierAlts,
+        harder_alternatives: harderAlts,
+        equipment_alternatives: equipmentAlts,
       })
       onClose()
     } catch (err: unknown) {
@@ -491,6 +575,14 @@ function ExerciseDetailEditModal({
                   <ImagePlus className="w-4 h-4" /> Change media from Gallery
                 </button>
               )}
+            </div>
+
+            {/* Alternative exercises */}
+            <div className="border-t border-[#E8E5F0] pt-4 space-y-3">
+              <h3 className="text-sm font-semibold text-[#1a1a2e]">Alternative Exercises</h3>
+              <AlternativesPicker label="Easier alternatives" selected={easierAlts} onChange={setEasierAlts} allExercises={allExercises} currentId={exercise.id} />
+              <AlternativesPicker label="Harder alternatives" selected={harderAlts} onChange={setHarderAlts} allExercises={allExercises} currentId={exercise.id} />
+              <AlternativesPicker label="Different equipment / no equipment" selected={equipmentAlts} onChange={setEquipmentAlts} allExercises={allExercises} currentId={exercise.id} />
             </div>
 
             {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -791,7 +883,7 @@ export default function ExercisesPage() {
       setLibraryLoading(true)
       const { data } = await getSupabase()
         .from("exercise_definitions")
-        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url, translations")
+        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url, translations, easier_alternatives, harder_alternatives, equipment_alternatives")
         .order("name")
       setMyLibrary((data as SavedExercise[]) ?? [])
       setLibraryLoading(false)
@@ -856,10 +948,10 @@ export default function ExercisesPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
       setSavedId(idStr)
-      setTimeout(() => setSavedId(null), 2000)
+      setTimeout(() => { setSavedId(null); setShowExerciseDbModal(false) }, 1000)
       const { data: refreshed } = await getSupabase()
         .from("exercise_definitions")
-        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url, translations")
+        .select("id, name, muscle_group, equipment, description, video_url, exercisedb_gif_url, exercisedb_image_url, translations, easier_alternatives, harder_alternatives, equipment_alternatives")
         .order("name")
       if (refreshed?.length) setMyLibrary(refreshed as SavedExercise[])
     } catch (err) {
@@ -1016,6 +1108,7 @@ export default function ExercisesPage() {
       {selectedLibraryExercise && (
         <ExerciseDetailEditModal
           exercise={selectedLibraryExercise}
+          allExercises={myLibrary}
           onClose={() => setSelectedLibraryExercise(null)}
           onUpdated={(updated) => {
             setMyLibrary((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))

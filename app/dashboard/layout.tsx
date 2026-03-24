@@ -17,12 +17,14 @@ import {
   BookOpen,
   HeadphonesIcon,
   Bell,
+  Calendar,
 } from "lucide-react"
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/exercises", label: "Exercises", icon: Dumbbell },
   { href: "/dashboard/training-builder", label: "Training Builder", icon: ClipboardList },
+  { href: "/dashboard/programs", label: "Programs", icon: Calendar },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/admins", label: "Admins", icon: ShieldCheck },
   { href: "/dashboard/gallery", label: "Gallery", icon: Image },
