@@ -87,6 +87,7 @@ function CreateExerciseModal({
   const [descriptionHe, setDescriptionHe] = useState("")
   const [muscleGroupHe, setMuscleGroupHe] = useState("")
   const [equipmentHe, setEquipmentHe] = useState("")
+  const [lang, setLang] = useState<"en" | "he">("en")
 
   async function handleSave() {
     if (!name.trim()) return
@@ -176,63 +177,74 @@ function CreateExerciseModal({
               <X className="w-5 h-5" />
             </button>
           </div>
+          {/* EN / HE tabs */}
+          <div className="flex rounded-xl border border-[#E8E5F0] overflow-hidden mb-5">
+            <button type="button" onClick={() => setLang("en")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "en" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
+              EN English
+            </button>
+            <button type="button" onClick={() => setLang("he")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "he" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
+              עב Hebrew
+            </button>
+          </div>
+
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Exercise Name <span className="text-red-400">*</span></label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bulgarian Split Squat" className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Muscle Group</label>
-                <select value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 bg-white">
-                  <option value="">Select...</option>
-                  {MUSCLE_GROUPS.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Equipment</label>
-                <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 bg-white">
-                  <option value="">Select...</option>
-                  {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Category</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 bg-white">
-                <option value="">Select...</option>
-                {EXERCISE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Description / Instructions <span className="text-[#6B7280] font-normal">(optional)</span></label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the exercise, form cues, tips..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
-            </div>
-            {/* Hebrew fields */}
-            <div className="border-t border-[#E8E5F0] pt-4">
-              <p className="text-sm font-medium text-[#7C3AED] mb-3">Hebrew translations</p>
-              <div className="space-y-3 bg-[#F8F7FF] rounded-xl p-4 border border-[#E8E5F0]">
+            {lang === "en" ? (
+              <>
                 <div>
-                  <label className="block text-xs font-medium text-[#6B7280] mb-1">Name (Hebrew)</label>
-                  <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} dir="rtl" placeholder="שם התרגיל" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Exercise Name <span className="text-red-400">*</span></label>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bulgarian Split Squat" className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Muscle group (HE)</label>
-                    <input type="text" value={muscleGroupHe} onChange={(e) => setMuscleGroupHe(e.target.value)} dir="rtl" placeholder="קבוצת שרירים" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Muscle Group</label>
+                    <select value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 bg-white">
+                      <option value="">Select...</option>
+                      {MUSCLE_GROUPS.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Equipment (HE)</label>
-                    <input type="text" value={equipmentHe} onChange={(e) => setEquipmentHe(e.target.value)} dir="rtl" placeholder="ציוד" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Equipment</label>
+                    <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 bg-white">
+                      <option value="">Select...</option>
+                      {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+                    </select>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#6B7280] mb-1">Description (HE)</label>
-                  <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={2} dir="rtl" placeholder="הוראות, הערות..." className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Category</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 bg-white">
+                    <option value="">Select...</option>
+                    {EXERCISE_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
                 </div>
-                <p className="text-[10px] text-[#6B7280]">Leave empty to use auto-translation</p>
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Description <span className="text-[#6B7280] font-normal">(optional)</span></label>
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the exercise, form cues, tips..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4" dir="rtl">
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">שם התרגיל</label>
+                  <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} placeholder="לדוגמה: סקוואט בולגרי" className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">קבוצת שרירים</label>
+                    <input type="text" value={muscleGroupHe} onChange={(e) => setMuscleGroupHe(e.target.value)} placeholder="חזה, גב, רגליים..." className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">ציוד</label>
+                    <input type="text" value={equipmentHe} onChange={(e) => setEquipmentHe(e.target.value)} placeholder="משקל גוף, משקולת..." className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">תיאור <span className="text-[#6B7280] font-normal">(אופציונלי)</span></label>
+                  <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} placeholder="הוראות ביצוע, טיפים..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                </div>
+                <p className="text-xs text-[#6B7280]">השאר ריק לתרגום אוטומטי</p>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Media from Gallery <span className="text-[#6B7280] font-normal">(optional)</span></label>
@@ -379,7 +391,7 @@ function ExerciseDetailEditModal({
   const [descriptionHe, setDescriptionHe] = useState(exercise.translations?.he?.description ?? "")
   const [muscleGroupHe, setMuscleGroupHe] = useState(exercise.translations?.he?.muscle_group ?? "")
   const [equipmentHe, setEquipmentHe] = useState(exercise.translations?.he?.equipment ?? "")
-  const [showHebrew, setShowHebrew] = useState(false)
+  const [lang, setLang] = useState<"en" | "he">("en")
   const [easierAlts, setEasierAlts] = useState<string[]>(exercise.easier_alternatives ?? [])
   const [harderAlts, setHarderAlts] = useState<string[]>(exercise.harder_alternatives ?? [])
   const [equipmentAlts, setEquipmentAlts] = useState<string[]>(exercise.equipment_alternatives ?? [])
@@ -422,7 +434,7 @@ function ExerciseDetailEditModal({
           easier_alternatives: easierAlts,
           harder_alternatives: harderAlts,
           equipment_alternatives: equipmentAlts,
-          translations_he: showHebrew ? {
+          translations_he: (nameHe.trim() || descriptionHe.trim() || muscleGroupHe.trim() || equipmentHe.trim()) ? {
             name: nameHe.trim() || undefined,
             description: descriptionHe.trim() || undefined,
             muscle_group: muscleGroupHe.trim() || undefined,
@@ -508,66 +520,66 @@ function ExerciseDetailEditModal({
               </div>
             )}
 
-            {/* Edit form */}
-            <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Muscle group</label>
-                <select value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20">
-                  <option value="">—</option>
-                  {MUSCLE_GROUPS.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Equipment</label>
-                <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20">
-                  <option value="">—</option>
-                  {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Instructions, notes..." className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+            {/* EN / HE tabs */}
+            <div className="flex rounded-xl border border-[#E8E5F0] overflow-hidden">
+              <button type="button" onClick={() => setLang("en")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "en" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
+                EN English
+              </button>
+              <button type="button" onClick={() => setLang("he")} className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${lang === "he" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
+                עב Hebrew
+              </button>
             </div>
 
-            {/* Hebrew translations toggle */}
-            <div className="border-t border-[#E8E5F0] pt-4">
-              <button type="button" onClick={() => setShowHebrew(!showHebrew)} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#7C3AED] text-[#7C3AED] text-sm font-medium hover:bg-[#F8F7FF] transition-colors">
-                {showHebrew ? "▲ Hide Hebrew" : "עב Edit Hebrew translations"}
-              </button>
-              {showHebrew && (
-                <div className="mt-3 space-y-3 bg-[#F8F7FF] rounded-xl p-4 border border-[#E8E5F0]">
-                  <div>
-                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Name (Hebrew)</label>
-                    <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} dir="rtl" placeholder="שם התרגיל" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-[#6B7280] mb-1">Muscle group (HE)</label>
-                      <input type="text" value={muscleGroupHe} onChange={(e) => setMuscleGroupHe(e.target.value)} dir="rtl" placeholder="קבוצת שרירים" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-[#6B7280] mb-1">Equipment (HE)</label>
-                      <input type="text" value={equipmentHe} onChange={(e) => setEquipmentHe(e.target.value)} dir="rtl" placeholder="ציוד" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Description (HE)</label>
-                    <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={2} dir="rtl" placeholder="הוראות, הערות..." className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
-                  </div>
-                  <p className="text-[10px] text-[#6B7280]">Leave empty to use auto-translation</p>
+            {lang === "en" ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Name</label>
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
                 </div>
-              )}
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Muscle group</label>
+                    <select value={muscleGroup} onChange={(e) => setMuscleGroup(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20">
+                      <option value="">—</option>
+                      {MUSCLE_GROUPS.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Equipment</label>
+                    <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20">
+                      <option value="">—</option>
+                      {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Description</label>
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Instructions, notes..." className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4" dir="rtl">
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">שם התרגיל</label>
+                  <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} placeholder="לדוגמה: סקוואט בולגרי" className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1">קבוצת שרירים</label>
+                    <input type="text" value={muscleGroupHe} onChange={(e) => setMuscleGroupHe(e.target.value)} placeholder="חזה, גב, רגליים..." className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a1a2e] mb-1">ציוד</label>
+                    <input type="text" value={equipmentHe} onChange={(e) => setEquipmentHe(e.target.value)} placeholder="משקל גוף, משקולת..." className="w-full px-3 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1a1a2e] mb-1">תיאור</label>
+                  <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={3} placeholder="הוראות ביצוע, טיפים..." className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                </div>
+                <p className="text-xs text-[#6B7280]">השאר ריק לתרגום אוטומטי</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Media from Gallery (optional)</label>
