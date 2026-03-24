@@ -1,4 +1,6 @@
 import { createSupabaseServer } from "@/lib/supabase-server"
+import { createClient } from "@supabase/supabase-js"
+import { supabaseUrl } from "@/lib/supabase"
 import { NextRequest, NextResponse } from "next/server"
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions"
@@ -95,7 +97,7 @@ Return ONLY valid JSON, no markdown fences or extra text.`,
       )
     }
 
-    // Try to fetch image from Pixabay
+    // Try to fetch image from Pixabay and upload to Supabase Storage
     let featured_image = ""
     let featured_image_source = ""
     const pixabayKey = process.env.PIXABAY_API_KEY
@@ -111,11 +113,48 @@ Return ONLY valid JSON, no markdown fences or extra text.`,
         if (pxRes.ok) {
           const pxData = await pxRes.json()
           if (pxData.hits && pxData.hits.length > 0) {
-            // Pick a random one from top 5
             const idx = Math.floor(Math.random() * Math.min(5, pxData.hits.length))
             const hit = pxData.hits[idx]
-            featured_image = hit.webformatURL || hit.largeImageURL || ""
+            const imageUrl = hit.largeImageURL || hit.webformatURL || ""
             featured_image_source = hit.pageURL || ""
+
+            // Download the image and upload to Supabase Storage so the URL never expires
+            if (imageUrl) {
+              const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+              if (serviceKey) {
+                const imgRes = await fetch(imageUrl)
+                if (imgRes.ok) {
+                  const contentType = imgRes.headers.get("content-type") || "image/jpeg"
+                  const ext = contentType.includes("png") ? "png" : "jpg"
+                  const filePath = `blog/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
+                  const buffer = await imgRes.arrayBuffer()
+
+                  const adminClient = createClient(supabaseUrl, serviceKey, {
+                    auth: { autoRefreshToken: false, persistSession: false },
+                  })
+
+                  const { error: uploadErr } = await adminClient.storage
+                    .from("training-media")
+                    .upload(filePath, buffer, {
+                      contentType,
+                      cacheControl: "31536000",
+                      upsert: false,
+                    })
+
+                  if (!uploadErr) {
+                    const { data: { publicUrl } } = adminClient.storage
+                      .from("training-media")
+                      .getPublicUrl(filePath)
+                    featured_image = publicUrl
+                  }
+                }
+              }
+            }
+
+            // Fallback to Pixabay URL if upload failed
+            if (!featured_image) {
+              featured_image = imageUrl
+            }
           }
         }
       } catch {

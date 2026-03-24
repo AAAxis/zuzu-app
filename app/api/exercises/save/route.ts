@@ -77,6 +77,7 @@ export async function POST(request: Request) {
 
   const { error } = await adminClient.from("exercise_definitions").insert({
     name: name,
+    name_he: he.name || name,
     muscle_group: body.muscle_group ?? null,
     category: body.category ?? null,
     equipment: body.equipment ?? null,
