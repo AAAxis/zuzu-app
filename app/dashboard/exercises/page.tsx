@@ -83,6 +83,10 @@ function CreateExerciseModal({
   const [error, setError] = useState("")
   const [showGalleryPicker, setShowGalleryPicker] = useState(false)
   const [selectedGalleryItem, setSelectedGalleryItem] = useState<GalleryItem | null>(null)
+  const [nameHe, setNameHe] = useState("")
+  const [descriptionHe, setDescriptionHe] = useState("")
+  const [muscleGroupHe, setMuscleGroupHe] = useState("")
+  const [equipmentHe, setEquipmentHe] = useState("")
 
   async function handleSave() {
     if (!name.trim()) return
@@ -101,6 +105,7 @@ function CreateExerciseModal({
           else if (selectedGalleryItem.thumbnail_url) imageUrl = selectedGalleryItem.thumbnail_url
         }
       }
+      const hasHe = nameHe.trim() || descriptionHe.trim() || muscleGroupHe.trim() || equipmentHe.trim()
       const res = await fetch("/api/exercises/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,6 +123,12 @@ function CreateExerciseModal({
           exercisedb_secondary_muscles: [],
           exercisedb_variations: [],
           exercisedb_related_exercises: [],
+          translations_he: hasHe ? {
+            name: nameHe.trim() || undefined,
+            description: descriptionHe.trim() || undefined,
+            muscle_group: muscleGroupHe.trim() || undefined,
+            equipment: equipmentHe.trim() || undefined,
+          } : undefined,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -197,6 +208,32 @@ function CreateExerciseModal({
               <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Description / Instructions <span className="text-[#6B7280] font-normal">(optional)</span></label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the exercise, form cues, tips..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
             </div>
+            {/* Hebrew fields */}
+            <div className="border-t border-[#E8E5F0] pt-4">
+              <p className="text-sm font-medium text-[#7C3AED] mb-3">Hebrew translations</p>
+              <div className="space-y-3 bg-[#F8F7FF] rounded-xl p-4 border border-[#E8E5F0]">
+                <div>
+                  <label className="block text-xs font-medium text-[#6B7280] mb-1">Name (Hebrew)</label>
+                  <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} dir="rtl" placeholder="שם התרגיל" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Muscle group (HE)</label>
+                    <input type="text" value={muscleGroupHe} onChange={(e) => setMuscleGroupHe(e.target.value)} dir="rtl" placeholder="קבוצת שרירים" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Equipment (HE)</label>
+                    <input type="text" value={equipmentHe} onChange={(e) => setEquipmentHe(e.target.value)} dir="rtl" placeholder="ציוד" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#6B7280] mb-1">Description (HE)</label>
+                  <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={2} dir="rtl" placeholder="הוראות, הערות..." className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                </div>
+                <p className="text-[10px] text-[#6B7280]">Leave empty to use auto-translation</p>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Media from Gallery <span className="text-[#6B7280] font-normal">(optional)</span></label>
               {selectedGalleryItem ? (

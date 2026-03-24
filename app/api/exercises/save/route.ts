@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     easier_alternatives?: string[]
     harder_alternatives?: string[]
     equipment_alternatives?: string[]
+    translations_he?: { name?: string; description?: string; muscle_group?: string; equipment?: string }
   }
   try {
     body = await request.json()
@@ -67,12 +68,25 @@ export async function POST(request: Request) {
     )
   }
 
-  const he = await translateManyToHebrew([
-    { key: "name", text: name },
-    { key: "description", text: body.description ?? "" },
-    { key: "muscle_group", text: body.muscle_group ?? "" },
-    { key: "equipment", text: body.equipment ?? "" },
-  ])
+  const manualHe = body.translations_he
+  const hasManualHe = manualHe && (manualHe.name || manualHe.description || manualHe.muscle_group || manualHe.equipment)
+
+  let he: Record<string, string>
+  if (hasManualHe) {
+    he = {
+      name: manualHe.name || "",
+      description: manualHe.description || "",
+      muscle_group: manualHe.muscle_group || "",
+      equipment: manualHe.equipment || "",
+    }
+  } else {
+    he = await translateManyToHebrew([
+      { key: "name", text: name },
+      { key: "description", text: body.description ?? "" },
+      { key: "muscle_group", text: body.muscle_group ?? "" },
+      { key: "equipment", text: body.equipment ?? "" },
+    ])
+  }
 
   const adminClient = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
