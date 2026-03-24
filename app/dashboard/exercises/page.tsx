@@ -670,7 +670,7 @@ function ExerciseDbSearchModal({
         <div className="p-4 border-b border-[#E8E5F0] flex items-center justify-between shrink-0">
           <h2 className="text-xl font-bold text-[#1a1a2e] flex items-center gap-2">
             <Database className="w-6 h-6 text-[#7C3AED]" />
-            Search Exercise DB
+            ExerciseDB
           </h2>
           <button
             type="button"
@@ -999,7 +999,7 @@ export default function ExercisesPage() {
             className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#7C3AED] text-[#7C3AED] rounded-xl text-sm font-medium hover:bg-[#F8F7FF] transition-colors"
           >
             <Database className="w-4 h-4" />
-            Search Exercise DB
+            ExerciseDB
           </button>
           <button
             type="button"
@@ -1066,7 +1066,7 @@ export default function ExercisesPage() {
           </div>
         ) : myLibrary.length === 0 ? (
           <p className="text-[#6B7280] py-8 text-center">
-            No exercises saved yet. Click &quot;Search Exercise DB&quot; to find and add exercises, or &quot;Create My Own&quot; to add a custom exercise.
+            No exercises saved yet. Click &quot;ExerciseDB&quot; to find and add exercises, or &quot;Create My Own&quot; to add a custom exercise.
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto">
