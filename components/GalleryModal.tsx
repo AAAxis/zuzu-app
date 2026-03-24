@@ -163,12 +163,34 @@ function VideoLinkModal({ onClose, onAdded }: { onClose: () => void; onAdded: ()
   const [error, setError] = useState("")
   const [detected, setDetected] = useState<{ provider: "youtube" | "vimeo"; videoId: string } | null>(null)
 
-  function handleUrlChange(value: string) {
+  const [fetching, setFetching] = useState(false)
+
+  async function handleUrlChange(value: string) {
     setUrl(value)
     setError("")
     const { provider, videoId } = parseVideoUrl(value)
-    if (provider && videoId) setDetected({ provider, videoId })
-    else setDetected(null)
+    if (provider && videoId) {
+      setDetected({ provider, videoId })
+      // Auto-fetch title & description via oEmbed
+      if (!title) {
+        setFetching(true)
+        try {
+          const oembedUrl = provider === "youtube"
+            ? `https://www.youtube.com/oembed?url=${encodeURIComponent(value)}&format=json`
+            : `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(value)}`
+          const res = await fetch(oembedUrl)
+          if (res.ok) {
+            const data = await res.json()
+            if (data.title && !title) setTitle(data.title)
+            if (data.description && !description) setDescription(data.description)
+            else if (data.author_name && !description) setDescription(`By ${data.author_name}`)
+          }
+        } catch { /* ignore fetch errors */ }
+        setFetching(false)
+      }
+    } else {
+      setDetected(null)
+    }
   }
 
   async function handleSave() {
@@ -226,11 +248,11 @@ function VideoLinkModal({ onClose, onAdded }: { onClose: () => void; onAdded: ()
         )}
         <div className="mt-5 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Title</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Squat Form Tutorial" className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Title {fetching && <Loader2 className="w-3 h-3 animate-spin inline ml-1 text-[#7C3AED]" />}</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={fetching ? "Fetching from video..." : "e.g. Squat Form Tutorial"} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Description <span className="text-[#6B7280] font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-[#1a1a2e] mb-1.5">Description <span className="text-[#6B7280] font-normal">(auto-fetched)</span></label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe this video..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
           </div>
         </div>
