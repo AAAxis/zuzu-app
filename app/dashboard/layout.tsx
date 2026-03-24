@@ -26,8 +26,6 @@ const navItems = [
   { href: "/dashboard/training-builder", label: "Training Builder", icon: ClipboardList },
   { href: "/dashboard/programs", label: "Programs", icon: Calendar },
   { href: "/dashboard/users", label: "Users", icon: Users },
-  { href: "/dashboard/admins", label: "Admins", icon: ShieldCheck },
-  { href: "/dashboard/gallery", label: "Gallery", icon: Image },
   { href: "/dashboard/blog", label: "Blog", icon: BookOpen },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },
   { href: "/dashboard/support", label: "Support", icon: HeadphonesIcon },

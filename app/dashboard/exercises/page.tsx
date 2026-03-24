@@ -34,6 +34,7 @@ import {
 import { ExerciseMedia } from "./ExerciseMedia"
 import type { GalleryItem } from "@/lib/types"
 import { getDisplayName, getTranslated, DEFAULT_LOCALE } from "@/lib/locale"
+import { GalleryModal } from "@/components/GalleryModal"
 
 type SearchType = "name" | "bodyPart" | "equipment"
 
@@ -868,6 +869,7 @@ export default function ExercisesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showExerciseDbModal, setShowExerciseDbModal] = useState(false)
   const [selectedLibraryExercise, setSelectedLibraryExercise] = useState<SavedExercise | null>(null)
+  const [showGalleryModal, setShowGalleryModal] = useState(false)
 
   useEffect(() => {
     Promise.all([getBodyPartsEnglish(), getEquipmentListEnglish()]).then(
@@ -985,6 +987,14 @@ export default function ExercisesPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setShowGalleryModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#E8E5F0] text-[#6B7280] rounded-xl text-sm font-medium hover:border-[#7C3AED] hover:text-[#7C3AED] transition-colors"
+          >
+            <ImageIcon className="w-4 h-4" />
+            Gallery
+          </button>
+          <button
+            type="button"
             onClick={() => setShowExerciseDbModal(true)}
             className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#7C3AED] text-[#7C3AED] rounded-xl text-sm font-medium hover:bg-[#F8F7FF] transition-colors"
           >
@@ -1092,6 +1102,9 @@ export default function ExercisesPage() {
           </div>
         )}
       </div>
+
+      {/* Gallery Modal */}
+      {showGalleryModal && <GalleryModal onClose={() => setShowGalleryModal(false)} />}
 
       {/* Create My Own Modal */}
       {showCreateModal && (

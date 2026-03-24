@@ -45,6 +45,7 @@ export default function UsersPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null)
   const [settingAdminId, setSettingAdminId] = useState<string | null>(null)
+  const [filterRole, setFilterRole] = useState<"all" | "admin">("all")
 
   useEffect(() => {
     loadUsers()
@@ -80,8 +81,9 @@ export default function UsersPage() {
   const filtered = users
     .filter(
       (u) =>
-        (u.full_name?.toLowerCase() || "").includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase())
+        ((u.full_name?.toLowerCase() || "").includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())) &&
+        (filterRole === "all" || u.role === "admin")
     )
     .sort((a, b) => {
       const aVal = a[sortField] ?? ""
@@ -173,22 +175,31 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-[#1a1a2e]">
-            Users
+            Users & Admins
           </h1>
           <p className="text-[#6B7280] mt-1">
-            {users.length} registered user{users.length !== 1 && "s"}
+            {users.length} registered user{users.length !== 1 && "s"} · {users.filter((u) => u.role === "admin").length} admin{users.filter((u) => u.role === "admin").length !== 1 && "s"}
           </p>
         </div>
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or email..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E5F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-xl border border-[#E8E5F0] overflow-hidden">
+            <button onClick={() => setFilterRole("all")} className={`px-4 py-2 text-sm font-medium transition-colors ${filterRole === "all" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
+              All Users
+            </button>
+            <button onClick={() => setFilterRole("admin")} className={`px-4 py-2 text-sm font-medium transition-colors ${filterRole === "admin" ? "bg-[#7C3AED] text-white" : "bg-white text-[#6B7280] hover:bg-[#F8F7FF]"}`}>
+              <ShieldCheck className="w-3.5 h-3.5 inline mr-1" />Admins
+            </button>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E5F0] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 focus:border-[#7C3AED]"
+            />
+          </div>
         </div>
       </div>
 
