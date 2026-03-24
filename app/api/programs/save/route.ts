@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     location?: string
     is_system_program?: boolean
     days?: unknown[]
+    translations_he?: { name?: string; description?: string }
   }
   try {
     body = await request.json()
@@ -58,10 +59,21 @@ export async function POST(request: Request) {
 
   const description = body.description ?? ""
 
-  const he = await translateManyToHebrew([
-    { key: "name", text: name },
-    { key: "description", text: description },
-  ])
+  const manualHe = body.translations_he
+  const hasManualHe = manualHe && (manualHe.name || manualHe.description)
+
+  let he: Record<string, string>
+  if (hasManualHe) {
+    he = {
+      name: manualHe.name || name,
+      description: manualHe.description || description,
+    }
+  } else {
+    he = await translateManyToHebrew([
+      { key: "name", text: name },
+      { key: "description", text: description },
+    ])
+  }
 
   const basePayload = {
     name,

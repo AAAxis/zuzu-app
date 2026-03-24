@@ -15,6 +15,7 @@ import {
   MapPin,
   Moon,
   Dumbbell,
+  Sparkles,
 } from "lucide-react"
 import { getSupabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
@@ -74,6 +75,13 @@ export default function ProgramsPage() {
   ])
   const [editingProgram, setEditingProgram] = useState<WorkoutProgram | null>(null)
   const [programToDelete, setProgramToDelete] = useState<WorkoutProgram | null>(null)
+  const [showHebrew, setShowHebrew] = useState(false)
+  const [nameHe, setNameHe] = useState("")
+  const [descriptionHe, setDescriptionHe] = useState("")
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -153,6 +161,10 @@ export default function ProgramsPage() {
           location,
           is_system_program: isSystemProgram,
           days,
+          translations_he: (nameHe.trim() || descriptionHe.trim()) ? {
+            name: nameHe.trim() || undefined,
+            description: descriptionHe.trim() || undefined,
+          } : undefined,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -201,6 +213,8 @@ export default function ProgramsPage() {
     setLocation(p.location || "gym")
     setIsSystemProgram(p.is_system_program)
     setDays(p.days?.length ? p.days : [{ day_number: 1, type: "workout", workout_template_id: null, label: "Day 1" }])
+    setNameHe(p.translations?.he?.name || p.name_he || "")
+    setDescriptionHe(p.translations?.he?.description || p.description_he || "")
     if (forEdit) setEditingProgram(p)
     else setEditingProgram(null)
   }
@@ -229,8 +243,43 @@ export default function ProgramsPage() {
     setGender("unisex")
     setLocation("gym")
     setIsSystemProgram(false)
+    setNameHe("")
+    setDescriptionHe("")
     setDays([{ day_number: 1, type: "workout", workout_template_id: null, label: "Day 1" }])
     setEditingProgram(null)
+  }
+
+  async function generateWithAi() {
+    const prompt = aiPrompt.trim()
+    if (!prompt) { setAiError("Describe your program first."); return }
+    if (templates.length === 0) { setAiError("Create at least one workout template first (Training Builder)."); return }
+    setAiError(null)
+    setAiLoading(true)
+    try {
+      const res = await fetch("/api/programs/ai-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          templates: templates.map((t) => ({ id: t.id, name: getTemplateName(t) })),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { error?: string }).error || res.statusText)
+      const result = data as { name: string; description: string; gender: string; location: string; days: ProgramDay[] }
+      setProgramName(result.name)
+      setProgramDescription(result.description)
+      setGender(result.gender || "unisex")
+      setLocation(result.location || "gym")
+      setDays(result.days?.length ? result.days : [{ day_number: 1, type: "workout", workout_template_id: null, label: "Day 1" }])
+      setEditingProgram(null)
+      setAiModalOpen(false)
+      setAiPrompt("")
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : "Failed to generate program.")
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   if (isLoading) {
@@ -273,6 +322,26 @@ export default function ProgramsPage() {
               className="w-full rounded-xl border border-[#E8E5F0] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none mb-3"
             />
 
+            {/* Hebrew translations */}
+            <div className="mb-3">
+              <button type="button" onClick={() => setShowHebrew(!showHebrew)} className="text-sm font-medium text-[#7C3AED] hover:underline">
+                {showHebrew ? "Hide" : "Edit"} Hebrew translations
+              </button>
+              {showHebrew && (
+                <div className="mt-2 space-y-2 bg-[#F8F7FF] rounded-xl p-3 border border-[#E8E5F0]">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Name (Hebrew)</label>
+                    <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} dir="rtl" placeholder="שם התוכנית" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Description (Hebrew)</label>
+                    <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={2} dir="rtl" placeholder="תיאור" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none" />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Leave empty to use auto-translation</p>
+                </div>
+              )}
+            </div>
+
             {/* Thumbnail */}
             <div className="mb-3">
               <label className="block text-xs font-medium text-[#6B7280] mb-1">Thumbnail image</label>
@@ -312,7 +381,7 @@ export default function ProgramsPage() {
             </div>
 
             {/* Gender & Location */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-medium text-[#6B7280] mb-1"><Users className="w-3 h-3 inline mr-1" />Gender</label>
                 <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full rounded-xl border border-[#E8E5F0] px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#7C3AED]">
@@ -329,6 +398,15 @@ export default function ProgramsPage() {
                 </select>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => { setAiError(null); setAiPrompt(""); setAiModalOpen(true) }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#7C3AED] text-[#7C3AED] font-medium hover:bg-[#F8F7FF] transition-colors"
+            >
+              <Sparkles className="w-5 h-5" />
+              Create with AI
+            </button>
           </div>
 
           {/* My programs */}
@@ -479,6 +557,51 @@ export default function ProgramsPage() {
               </button>
               <button type="button" onClick={deleteProgram} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700">
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Generate Modal */}
+      {aiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !aiLoading && setAiModalOpen(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-[#1a1a2e] mb-1 flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-[#7C3AED]" />
+              Create Program with AI
+            </h3>
+            <p className="text-sm text-[#6B7280] mb-4">
+              Describe the program you want (e.g. &quot;Push/Pull/Legs 6-day split for muscle building&quot;, &quot;3-day full body for beginners&quot;, &quot;Upper/Lower 4-day split&quot;). AI will create the weekly schedule using your workout templates.
+            </p>
+            <textarea
+              placeholder="E.g. Push/Pull/Legs 6-day program with one rest day on Sunday"
+              value={aiPrompt}
+              onChange={(e) => { setAiPrompt(e.target.value); setAiError(null) }}
+              rows={4}
+              className="w-full rounded-xl border border-[#E8E5F0] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none mb-3"
+              disabled={aiLoading}
+            />
+            {aiError && <p className="text-sm text-red-600 mb-3">{aiError}</p>}
+            <p className="text-xs text-[#6B7280] mb-3">
+              Available templates: {templates.length === 0 ? "None — create some in Training Builder first" : templates.map((t) => getTemplateName(t)).join(", ")}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => !aiLoading && setAiModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-[#E8E5F0] font-medium hover:bg-[#F8F7FF]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={generateWithAi}
+                disabled={aiLoading || !aiPrompt.trim()}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#7C3AED] text-white font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {aiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                {aiLoading ? "Generating…" : "Generate"}
               </button>
             </div>
           </div>

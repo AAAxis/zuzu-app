@@ -98,6 +98,9 @@ export default function TrainingBuilderPage() {
   const [location, setLocation] = useState("gym")
   const [filterMuscle, setFilterMuscle] = useState("")
   const [filterEquipment, setFilterEquipment] = useState("")
+  const [showHebrew, setShowHebrew] = useState(false)
+  const [titleHe, setTitleHe] = useState("")
+  const [descriptionHe, setDescriptionHe] = useState("")
 
   useEffect(() => {
     async function load() {
@@ -194,6 +197,10 @@ export default function TrainingBuilderPage() {
       part_2_exercises: workoutExercises.filter((e) => e.part === "part_2_exercises"),
       part_3_exercises: workoutExercises.filter((e) => e.part === "part_3_exercises"),
       updated_at: new Date().toISOString(),
+      translations_he: (titleHe.trim() || descriptionHe.trim()) ? {
+        workout_title: titleHe.trim() || undefined,
+        workout_description: descriptionHe.trim() || undefined,
+      } : undefined,
     }
     try {
       const res = await fetch("/api/workout-templates/save", {
@@ -247,6 +254,8 @@ export default function TrainingBuilderPage() {
     setThumbnailUrl(t.thumbnail_url ?? null)
     setGender(t.gender || "unisex")
     setLocation(t.location || "gym")
+    setTitleHe(t.translations?.he?.workout_title ?? "")
+    setDescriptionHe(t.translations?.he?.workout_description ?? "")
     const p1 = (t.part_1_exercises ?? []).map((e, i) => ({
       ...e,
       key: e.key || `p1-${Date.now()}-${i}`,
@@ -291,6 +300,8 @@ export default function TrainingBuilderPage() {
     setThumbnailUrl(null)
     setGender("unisex")
     setLocation("gym")
+    setTitleHe("")
+    setDescriptionHe("")
     setEditingTemplate(null)
   }
 
@@ -414,6 +425,26 @@ export default function TrainingBuilderPage() {
               rows={2}
               className="w-full rounded-xl border border-[#E8E5F0] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none mb-3"
             />
+
+            {/* Hebrew translations */}
+            <div className="mb-3">
+              <button type="button" onClick={() => setShowHebrew(!showHebrew)} className="text-sm font-medium text-[#7C3AED] hover:underline">
+                {showHebrew ? "Hide" : "Edit"} Hebrew translations
+              </button>
+              {showHebrew && (
+                <div className="mt-2 space-y-2 bg-[#F8F7FF] rounded-xl p-3 border border-[#E8E5F0]">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Title (Hebrew)</label>
+                    <input type="text" value={titleHe} onChange={(e) => setTitleHe(e.target.value)} dir="rtl" placeholder="כותרת האימון" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Description (Hebrew)</label>
+                    <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={2} dir="rtl" placeholder="תיאור קצר" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED] resize-none" />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Leave empty to use auto-translation</p>
+                </div>
+              )}
+            </div>
 
             {/* Thumbnail */}
             <div className="mb-3">
@@ -727,15 +758,6 @@ export default function TrainingBuilderPage() {
           <div className="bg-white rounded-2xl border border-[#E8E5F0] p-6">
             <h2 className="text-lg font-bold text-[#1a1a2e] mb-4">Save template</h2>
             <p className="text-sm text-[#6B7280] mb-4">The workout title above is used as the template name.</p>
-            <label className="flex items-center gap-3 mb-4 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isSystemTemplate}
-                onChange={(e) => setIsSystemTemplate(e.target.checked)}
-                className="w-4 h-4 rounded border-[#E8E5F0] text-[#7C3AED] focus:ring-[#7C3AED]"
-              />
-              <span className="text-sm text-[#1a1a2e]">Use as example in app (visible to all users in Zuzu-fitness)</span>
-            </label>
             <button
               type="button"
               onClick={saveTemplate}

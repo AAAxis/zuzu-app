@@ -405,6 +405,11 @@ function ExerciseDetailEditModal({
   const [muscleGroup, setMuscleGroup] = useState(exercise.muscle_group ?? "")
   const [equipment, setEquipment] = useState(exercise.equipment ?? "")
   const [description, setDescription] = useState(exercise.description ?? "")
+  const [nameHe, setNameHe] = useState(exercise.translations?.he?.name ?? "")
+  const [descriptionHe, setDescriptionHe] = useState(exercise.translations?.he?.description ?? "")
+  const [muscleGroupHe, setMuscleGroupHe] = useState(exercise.translations?.he?.muscle_group ?? "")
+  const [equipmentHe, setEquipmentHe] = useState(exercise.translations?.he?.equipment ?? "")
+  const [showHebrew, setShowHebrew] = useState(false)
   const [easierAlts, setEasierAlts] = useState<string[]>(exercise.easier_alternatives ?? [])
   const [harderAlts, setHarderAlts] = useState<string[]>(exercise.harder_alternatives ?? [])
   const [equipmentAlts, setEquipmentAlts] = useState<string[]>(exercise.equipment_alternatives ?? [])
@@ -447,6 +452,12 @@ function ExerciseDetailEditModal({
           easier_alternatives: easierAlts,
           harder_alternatives: harderAlts,
           equipment_alternatives: equipmentAlts,
+          translations_he: showHebrew ? {
+            name: nameHe.trim() || undefined,
+            description: descriptionHe.trim() || undefined,
+            muscle_group: muscleGroupHe.trim() || undefined,
+            equipment: equipmentHe.trim() || undefined,
+          } : undefined,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -557,6 +568,37 @@ function ExerciseDetailEditModal({
               <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Description</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Instructions, notes..." className="w-full px-4 py-2.5 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
             </div>
+
+            {/* Hebrew translations toggle */}
+            <div className="border-t border-[#E8E5F0] pt-4">
+              <button type="button" onClick={() => setShowHebrew(!showHebrew)} className="flex items-center gap-2 text-sm font-medium text-[#7C3AED] hover:underline">
+                {showHebrew ? "Hide" : "Edit"} Hebrew translations
+              </button>
+              {showHebrew && (
+                <div className="mt-3 space-y-3 bg-[#F8F7FF] rounded-xl p-4 border border-[#E8E5F0]">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Name (Hebrew)</label>
+                    <input type="text" value={nameHe} onChange={(e) => setNameHe(e.target.value)} dir="rtl" placeholder="שם התרגיל" className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-[#6B7280] mb-1">Muscle group (HE)</label>
+                      <input type="text" value={muscleGroupHe} onChange={(e) => setMuscleGroupHe(e.target.value)} dir="rtl" placeholder="קבוצת שרירים" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#6B7280] mb-1">Equipment (HE)</label>
+                      <input type="text" value={equipmentHe} onChange={(e) => setEquipmentHe(e.target.value)} dir="rtl" placeholder="ציוד" className="w-full px-3 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#6B7280] mb-1">Description (HE)</label>
+                    <textarea value={descriptionHe} onChange={(e) => setDescriptionHe(e.target.value)} rows={2} dir="rtl" placeholder="הוראות, הערות..." className="w-full px-4 py-2 rounded-xl border border-[#E8E5F0] text-sm focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/20 resize-none" />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Leave empty to use auto-translation</p>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-[#1a1a2e] mb-1">Media from Gallery (optional)</label>
               {selectedGalleryItem ? (

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     part_1_exercises?: unknown[]
     part_2_exercises?: unknown[]
     part_3_exercises?: unknown[]
+    translations_he?: { workout_title?: string; workout_description?: string }
   }
   try {
     body = await request.json()
@@ -66,11 +67,23 @@ export async function POST(request: Request) {
   const workoutTitle = body.workout_title?.trim() || templateName
   const workoutDescription = body.workout_description ?? ""
 
-  const he = await translateManyToHebrew([
-    { key: "template_name", text: templateName },
-    { key: "workout_title", text: workoutTitle },
-    { key: "workout_description", text: workoutDescription },
-  ])
+  const manualHe = body.translations_he
+  const hasManualHe = manualHe && (manualHe.workout_title || manualHe.workout_description)
+
+  let he: Record<string, string>
+  if (hasManualHe) {
+    he = {
+      template_name: manualHe.workout_title || templateName,
+      workout_title: manualHe.workout_title || workoutTitle,
+      workout_description: manualHe.workout_description || workoutDescription,
+    }
+  } else {
+    he = await translateManyToHebrew([
+      { key: "template_name", text: templateName },
+      { key: "workout_title", text: workoutTitle },
+      { key: "workout_description", text: workoutDescription },
+    ])
+  }
 
   const now = new Date().toISOString()
   const basePayload = {
