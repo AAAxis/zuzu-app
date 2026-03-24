@@ -22,9 +22,9 @@ import {
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/exercises", label: "Exercises", icon: Dumbbell },
+  { href: "/dashboard/exercises", label: "Exercise Gallery", icon: Dumbbell },
   { href: "/dashboard/training-builder", label: "Training Builder", icon: ClipboardList },
-  { href: "/dashboard/programs", label: "Programs", icon: Calendar },
+  { href: "/dashboard/programs", label: "Program Builder", icon: Calendar },
   { href: "/dashboard/users", label: "Users", icon: Users },
   { href: "/dashboard/blog", label: "Blog", icon: BookOpen },
   { href: "/dashboard/notifications", label: "Notifications", icon: Bell },

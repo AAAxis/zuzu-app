@@ -247,7 +247,8 @@ function VideoLinkModal({ onClose, onAdded }: { onClose: () => void; onAdded: ()
 }
 
 /* ───────── Main Gallery Modal ───────── */
-export function GalleryModal({ onClose }: { onClose: () => void }) {
+export function GalleryModal({ onClose, onSelect }: { onClose: () => void; onSelect?: (item: GalleryItem) => void }) {
+  const pickMode = !!onSelect
   const [items, setItems] = useState<GalleryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -300,7 +301,7 @@ export function GalleryModal({ onClose }: { onClose: () => void }) {
             <div>
               <h2 className="text-xl font-bold text-[#1a1a2e] flex items-center gap-2">
                 <ImageIcon className="w-6 h-6 text-[#7C3AED]" />
-                Training Gallery
+                {pickMode ? "Select from Gallery" : "Training Gallery"}
               </h2>
               <p className="text-xs text-[#6B7280] mt-0.5">{photoCount} photos, {videoCount} videos</p>
             </div>
@@ -349,7 +350,7 @@ export function GalleryModal({ onClose }: { onClose: () => void }) {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {filtered.map((item) => (
                   <div key={item.id} className="group bg-white rounded-xl border border-[#E8E5F0] overflow-hidden hover:shadow-lg transition-all">
-                    <div className="aspect-square relative cursor-pointer overflow-hidden" onClick={() => setPreviewItem(item)}>
+                    <div className="aspect-square relative cursor-pointer overflow-hidden" onClick={() => pickMode ? onSelect!(item) : setPreviewItem(item)}>
                       {item.media_type === "photo" ? (
                         <img src={item.media_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (() => {
@@ -387,7 +388,7 @@ export function GalleryModal({ onClose }: { onClose: () => void }) {
             ) : (
               <div className="bg-white rounded-xl border border-[#E8E5F0] divide-y divide-[#E8E5F0]">
                 {filtered.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 p-3 hover:bg-[#F8F7FF] cursor-pointer" onClick={() => setPreviewItem(item)}>
+                  <div key={item.id} className="flex items-center gap-3 p-3 hover:bg-[#F8F7FF] cursor-pointer" onClick={() => pickMode ? onSelect!(item) : setPreviewItem(item)}>
                     <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0">
                       {item.media_type === "photo" ? (
                         <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
